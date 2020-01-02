@@ -1,2 +1,2 @@
 # cx-common-js-client
-# test commit 2
+Client library that allows JavaScript and TypeScript applications to interact with Checkmarx products.

@@ -3,12 +3,21 @@
   "version": "1.0.0",
   "description": "Client for interaction with Checkmarx products.",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/checkmarx-ltd/cx-common-js-client.git"
+  },
+  "author": {
+    "name": "Alexey Kononov",
+    "email": "alexey.kononov@checkmarx.com"
   },
   "keywords": [
     "checkmarx",
@@ -21,5 +30,8 @@
   "bugs": {
     "url": "https://github.com/checkmarx-ltd/cx-common-js-client/issues"
   },
-  "homepage": "https://github.com/checkmarx-ltd/cx-common-js-client#readme"
+  "homepage": "https://github.com/checkmarx-ltd/cx-common-js-client#readme",
+  "devDependencies": {
+    "typescript": "^3.7.4"
+  }
 }
