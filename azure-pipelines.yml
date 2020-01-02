@@ -2,11 +2,15 @@ trigger:
 - master
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: ubuntu-latest
 
 steps:
 - task: Npm@1
   inputs:
-    command: 'publish'
-    publishEndpoint: 'npmjs.com'
+    command: install
+
+- task: Npm@1
+  inputs:
+    command: publish
+    publishEndpoint: npmjs.com
 
