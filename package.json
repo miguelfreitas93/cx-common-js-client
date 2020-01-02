@@ -1,6 +1,6 @@
 {
-  "name": "cx-common-js-client",
-  "version": "0.1.0",
+  "name": "@checkmarx/cx-common-js-client",
+  "version": "0.1.3",
   "description": "Client for interaction with Checkmarx products.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepublish" : "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
