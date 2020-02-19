@@ -1,4 +1,4 @@
-import {ScanConfig} from "../..";
+import {ScaConfig, ScanConfig} from "../..";
 import {HttpClient} from "./httpClient";
 import Zipper from "../zipper";
 import {TaskSkippedError} from "../..";
@@ -15,6 +15,8 @@ import {TeamApiClient} from "./teamApiClient";
 import {ScanSummary} from "../../dto/scanSummary";
 import {ThresholdError} from "../../dto/thresholdError";
 import {tmpNameSync} from "tmp";
+import {ScaClient} from "./scaClient";
+import {ScaLoginSettings} from "../../dto/scaLoginSettings";
 
 /**
  * High-level CX API client that uses specialized clients internally.
@@ -23,6 +25,7 @@ export class CxClient {
     private httpClient: HttpClient | any;
     private sastClient: SastClient | any;
     private armClient: ArmClient | any;
+    private scaClient: ScaClient | any;
 
     private teamId = 0;
     private projectId = 0;
@@ -34,10 +37,16 @@ export class CxClient {
     constructor(private readonly log: Logger) {
     }
 
-    async scan(config: ScanConfig): Promise<ScanResults> {
+    //async scan(config: ScanConfig): Promise<ScanResults> {
+    async scan(config: ScanConfig) {
         this.config = config;
+        if(config.enableDependencyScan){
+            this.log.info("initializing sca client");
+            await this.initScaClient();
+            //this.scaClient.resolveProject(config.projectName);
+        }
 
-        this.log.info('Initializing Cx client');
+/*        this.log.info('Initializing Cx client');
         await this.initClients();
         await this.initDynamicFields();
 
@@ -47,7 +56,7 @@ export class CxClient {
         } else {
             this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
         }
-        return result;
+        return result;*/
     }
 
     private async initClients() {
@@ -61,6 +70,24 @@ export class CxClient {
         if (this.config.enablePolicyViolations) {
             await this.armClient.init();
         }
+    }
+
+    private async initScaClient(){
+        let setting:ScaLoginSettings = new ScaLoginSettings();
+        this.resolveScaLoginSettings(setting);
+        let scaHttp:HttpClient = new HttpClient(this.config.scaConfig.apiUrl,this.log);
+        this.scaClient = new ScaClient(this.config.scaConfig,scaHttp,this.log);
+        //await this.scaClient.httpClient.scaLogin(setting);
+        await this.scaClient.scaLogin(setting);
+        await this.scaClient.resolveProject(this.config.projectName);
+    }
+
+    private resolveScaLoginSettings(setting:ScaLoginSettings){
+        const baseUrl = url.resolve(this.config.scaConfig.accessControlUrl,'');
+        setting.accessControlBaseUrl=baseUrl;
+        setting.tenant=this.config.scaConfig.tenant;
+        setting.username=this.config.scaConfig.username;
+        setting.password=this.config.scaConfig.password;
     }
 
     private async createSASTScan(): Promise<ScanResults> {

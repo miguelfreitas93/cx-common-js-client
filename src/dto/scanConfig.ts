@@ -1,3 +1,5 @@
+import {ScaConfig} from "./scaConfig";
+
 export interface ScanConfig {
     username: string;
     password: string;
@@ -22,4 +24,6 @@ export interface ScanConfig {
     highThreshold?: number;
     mediumThreshold?: number;
     lowThreshold?: number;
+    enableDependencyScan: boolean;
+    scaConfig: ScaConfig;
 }

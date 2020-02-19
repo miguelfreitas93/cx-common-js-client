@@ -1,6 +1,7 @@
 import * as url from 'url';
 import * as request from 'superagent';
 import {Logger} from "../logger";
+import {ScaLoginSettings} from "../../dto/scaLoginSettings";
 
 interface InternalRequestOptions extends RequestOptions {
     method: 'put' | 'post' | 'get';
@@ -140,4 +141,35 @@ export class HttpClient {
                 }
             );
     }
+
+    async scaLogin(scaLoginSettings:ScaLoginSettings,authPath:string){
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+        const fullUrl = url.resolve(scaLoginSettings.accessControlBaseUrl, authPath);
+        return request
+            .post(fullUrl)
+            .type('form')
+            .send({
+                userName: scaLoginSettings.username,
+                password: scaLoginSettings.password,
+                grant_type: 'password',
+                scope: 'sca_api offline_access',
+                client_id: 'sca_resource_owner',
+                client_secret: '',
+                acr_values:'Tenant:'+scaLoginSettings.tenant
+            })
+            .then(
+                (response: request.Response) => {
+                    this.accessToken = response.body.access_token;
+                    this.log.info( "this is the token " + this.accessToken);
+                },
+                (err: any) => {
+                    const status = err && err.response ? (err.response as request.Response).status : 'n/a';
+                    const message = err && err.message ? err.message : 'n/a';
+                    this.log.error(`POST request failed to ${fullUrl}. HTTP status: ${status}, message: ${message}`);
+                    this.log.error(`url ${this.baseUrl} username ${scaLoginSettings.username} password ${scaLoginSettings.password} tenant ${scaLoginSettings.tenant} acs ${scaLoginSettings.accessControlBaseUrl}`);
+                    throw Error('Login failed');
+                }
+            );
+    }
+
 }
