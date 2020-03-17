@@ -30,7 +30,7 @@ export class HttpClient {
     private username = '';
     private password = '';
 
-    constructor(private readonly baseUrl: string, private readonly log: Logger) {
+    constructor(private readonly baseUrl: string, private readonly log: Logger, private readonly cxOrigin:string) {
     }
 
     login(username: string, password: string) {
@@ -74,7 +74,7 @@ export class HttpClient {
 
         let result = request[options.method](fullUrl)
             .auth(this.accessToken, {type: 'bearer'})
-            .set('cxOrigin','VSTS')
+            .set('cxOrigin',this.cxOrigin)
             .accept('json');
 
         result = HttpClient.includePostData(result, options);

@@ -85,7 +85,7 @@ export class CxClient {
 
     private async initClients() {
         const baseUrl = url.resolve(this.config.serverUrl, 'CxRestAPI/');
-        this.httpClient = new HttpClient(baseUrl, this.log);
+        this.httpClient = new HttpClient(baseUrl, this.log,this.config.cxOrigin);
         await this.httpClient.login(this.config.username, this.config.password);
 
         this.sastClient = new SastClient(this.config, this.httpClient, this.log);
@@ -99,7 +99,7 @@ export class CxClient {
     private async initScaClient(){
         let setting:ScaLoginSettings = new ScaLoginSettings();
         this.resolveScaLoginSettings(setting);
-        let scaHttp:HttpClient = new HttpClient(this.config.scaConfig.apiUrl,this.log);
+        let scaHttp:HttpClient = new HttpClient(this.config.scaConfig.apiUrl,this.log,this.config.cxOrigin);
         this.scaClient = new ScaClient(this.config.scaConfig,scaHttp,this.log);
         //await this.scaClient.httpClient.scaLogin(setting);
         await this.scaClient.scaLogin(setting);

@@ -18,7 +18,7 @@ export interface ScanConfig {
     isSyncMode: boolean;
     presetName: string;
     scanTimeoutInMinutes?: number;
-
+    cxOrigin:string;
     enablePolicyViolations: boolean;
     vulnerabilityThreshold: boolean;
 
