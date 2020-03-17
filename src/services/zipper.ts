@@ -25,7 +25,6 @@ export default class Zipper {
             this.archiver = this.createArchiver(reject);
             const zipOutput = this.createOutputStream(targetPath, resolve);
             this.archiver.pipe(zipOutput);
-
             this.log.debug('Discovering files in source directory.');
             // followLinks is set to true to conform to Common Client behavior.
             const walker = walk(this.srcDir, {followLinks: true});
@@ -56,7 +55,7 @@ export default class Zipper {
         return result;
     }
 
-    private createOutputStream(targetPath: string, resolve: (value: ZipResult) => void) {
+    public createOutputStream(targetPath: string, resolve: (value: ZipResult) => void) {
         const result = fs.createWriteStream(targetPath);
         result.on('close', () => {
             const zipResult: ZipResult = {

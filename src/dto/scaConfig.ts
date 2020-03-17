@@ -5,4 +5,6 @@ export interface ScaConfig {
     password:string;
     tenant:string;
     webAppUrl:string;
+    dependencyFileExtension:string;
+    dependencyFolderExclusion:string;
 }

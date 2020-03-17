@@ -74,6 +74,7 @@ export class HttpClient {
 
         let result = request[options.method](fullUrl)
             .auth(this.accessToken, {type: 'bearer'})
+            .set('cxOrigin','VSTS')
             .accept('json');
 
         result = HttpClient.includePostData(result, options);
@@ -160,7 +161,7 @@ export class HttpClient {
             .then(
                 (response: request.Response) => {
                     this.accessToken = response.body.access_token;
-                    this.log.info( "this is the token " + this.accessToken);
+                    //this.log.info( "this is the token " + this.accessToken);
                 },
                 (err: any) => {
                     const status = err && err.response ? (err.response as request.Response).status : 'n/a';

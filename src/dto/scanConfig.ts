@@ -1,6 +1,7 @@
 import {ScaConfig} from "./scaConfig";
 
 export interface ScanConfig {
+    enableSastScan: boolean;
     username: string;
     password: string;
     sourceLocation: string;
