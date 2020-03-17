@@ -378,7 +378,7 @@ Scan results location:  ${result.sastScanResultsLink}
             versionInfo = await this.httpClient.getRequest('system/version', {suppressWarnings: true});
             this.log.info(`Checkmarx server version [${versionInfo.version}]. Hotfix [${versionInfo.hotFix}].`);
         } catch (e) {
-            versionInfo = null;
+            versionInfo = 'under9';
             this.log.info('Checkmarx server version is lower than 9.0.');
         }
         return versionInfo;
