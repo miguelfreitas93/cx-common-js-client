@@ -3,7 +3,9 @@ export interface ScanConfig {
     password: string;
     sourceLocation: string;
     projectName: string;
+    projectId?: number;
     teamName: string;
+    teamId?: number;
     serverUrl: string;
     isPublic: boolean;
     denyProject: boolean;
@@ -14,12 +16,14 @@ export interface ScanConfig {
     comment: string;
     isSyncMode: boolean;
     presetName: string;
+    presetId?: number;
     scanTimeoutInMinutes?: number;
-
+    
     enablePolicyViolations: boolean;
     vulnerabilityThreshold: boolean;
 
     highThreshold?: number;
     mediumThreshold?: number;
     lowThreshold?: number;
+    cxOrigin: string;
 }

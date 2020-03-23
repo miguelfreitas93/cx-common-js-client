@@ -52,7 +52,7 @@ export class CxClient {
 
     private async initClients() {
         const baseUrl = url.resolve(this.config.serverUrl, 'CxRestAPI/');
-        this.httpClient = new HttpClient(baseUrl, this.log);
+        this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log);
         await this.httpClient.login(this.config.username, this.config.password);
 
         this.sastClient = new SastClient(this.config, this.httpClient, this.log);
@@ -287,12 +287,27 @@ Scan results location:  ${result.sastScanResultsLink}
         const versionInfo = await this.getVersionInfo();
         this.isPolicyEnforcementSupported = !!versionInfo;
 
-        this.presetId = await this.sastClient.getPresetIdByName(this.config.presetName);
+        if (this.config.presetId) {
+            this.presetId = this.config.presetId;
+        }
+        else {
+            this.presetId = await this.sastClient.getPresetIdByName(this.config.presetName);
+        }
 
-        const teamApiClient = new TeamApiClient(this.httpClient, this.log);
-        this.teamId = await teamApiClient.getTeamIdByName(this.config.teamName);
+        if (this.config.teamId) {
+            this.teamId = this.config.teamId;
+        }
+        else {
+            const teamApiClient = new TeamApiClient(this.httpClient, this.log);
+            this.teamId = await teamApiClient.getTeamIdByName(this.config.teamName);
+        }
 
-        this.projectId = await this.getOrCreateProject();
+        if (this.config.projectId) {
+            this.projectId = this.config.projectId;
+        }
+        else {
+            this.projectId = await this.getOrCreateProject();
+        }
     }
 
     private logBuildFailure(failure: ScanSummary) {

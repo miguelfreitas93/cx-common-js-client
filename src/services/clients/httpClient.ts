@@ -29,7 +29,7 @@ export class HttpClient {
     private username = '';
     private password = '';
 
-    constructor(private readonly baseUrl: string, private readonly log: Logger) {
+    constructor(private readonly baseUrl: string, private readonly origin: string, private readonly log: Logger) {
     }
 
     login(username: string, password: string) {
@@ -53,8 +53,8 @@ export class HttpClient {
     }
 
     postMultipartRequest(relativePath: string,
-                         fields: { [fieldName: string]: any },
-                         attachments: { [fieldName: string]: string }) {
+        fields: { [fieldName: string]: any },
+        attachments: { [fieldName: string]: string }) {
         return this.sendRequest(relativePath, {
             method: 'post',
             multipartPostData: {
@@ -73,7 +73,8 @@ export class HttpClient {
 
         let result = request[options.method](fullUrl)
             .auth(this.accessToken, {type: 'bearer'})
-            .accept('json');
+            .accept('json')
+            .set('cxOrigin', this.origin);
 
         result = HttpClient.includePostData(result, options);
 
