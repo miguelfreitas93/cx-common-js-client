@@ -1,4 +1,4 @@
-import {ScaConfig, ScanConfig} from "../..";
+import {ScanConfig} from "../..";
 import {HttpClient} from "./httpClient";
 import Zipper from "../zipper";
 import {TaskSkippedError} from "../..";
@@ -17,8 +17,6 @@ import {ThresholdError} from "../../dto/thresholdError";
 import {tmpNameSync} from "tmp";
 import {ScaClient} from "./scaClient";
 import {ScaLoginSettings} from "../../dto/scaLoginSettings";
-import * as request from "superagent";
-import * as fs from "fs";
 import {SCAResults} from "../../dto/scaResults";
 
 /**
@@ -49,9 +47,7 @@ export class CxClient {
             await this.initScaClient();
             this.log.info("uploading zip file to sca");
             await this.uploadSourceCode("sca");
-            await this.scaClient.retrieveScanResults();
             scaResult = await this.scaClient.retrieveScanResults();
-            //this.scaClient.resolveProject(config.projectName);
         }
 
         if(config.enableSastScan){
@@ -59,7 +55,7 @@ export class CxClient {
             this.log.info('Initializing Cx client');
             await this.initClients();
             await this.initDynamicFields();
-            result = await this.createSASTScan();
+            result = await this.createSASTScan(result);
 
             if (config.isSyncMode) {
                 result = await this.getSASTResults(result);
@@ -67,6 +63,7 @@ export class CxClient {
                 this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
             }
         }
+        result.scaResults=scaResult;
         return result;
     }
 
@@ -101,12 +98,11 @@ export class CxClient {
         setting.password=this.config.scaConfig.password;
     }
 
-    private async createSASTScan(): Promise<ScanResults> {
+    private async createSASTScan(scanResult:ScanResults): Promise<ScanResults> {
         this.log.info('-----------------------------------Create CxSAST Scan:-----------------------------------');
         await this.updateScanSettings();
         await this.uploadSourceCode('sast');
 
-        const scanResult = new ScanResults(this.config);
         scanResult.scanId = await this.sastClient.createScan(this.projectId);
 
         const projectStateUrl = url.resolve(this.config.serverUrl, `CxWebClient/portal#/projectState/${this.projectId}/Summary`);
