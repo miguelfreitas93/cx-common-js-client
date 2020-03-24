@@ -1,4 +1,7 @@
+import {ScaConfig} from "./scaConfig";
+
 export interface ScanConfig {
+    enableSastScan: boolean;
     username: string;
     password: string;
     sourceLocation: string;
@@ -18,7 +21,7 @@ export interface ScanConfig {
     presetName: string;
     presetId?: number;
     scanTimeoutInMinutes?: number;
-    
+
     enablePolicyViolations: boolean;
     vulnerabilityThreshold: boolean;
 
@@ -26,4 +29,6 @@ export interface ScanConfig {
     mediumThreshold?: number;
     lowThreshold?: number;
     cxOrigin: string;
+    enableDependencyScan: boolean;
+    scaConfig?: ScaConfig;
 }

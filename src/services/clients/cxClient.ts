@@ -1,4 +1,4 @@
-import {ScanConfig} from "../..";
+import {ScaConfig, ScanConfig} from "../..";
 import {HttpClient} from "./httpClient";
 import Zipper from "../zipper";
 import {TaskSkippedError} from "../..";
@@ -15,6 +15,11 @@ import {TeamApiClient} from "./teamApiClient";
 import {ScanSummary} from "../../dto/scanSummary";
 import {ThresholdError} from "../../dto/thresholdError";
 import {tmpNameSync} from "tmp";
+import {ScaClient} from "./scaClient";
+import {ScaLoginSettings} from "../../dto/scaLoginSettings";
+import * as request from "superagent";
+import * as fs from "fs";
+import {SCAResults} from "../../dto/scaResults";
 
 /**
  * High-level CX API client that uses specialized clients internally.
@@ -23,6 +28,7 @@ export class CxClient {
     private httpClient: HttpClient | any;
     private sastClient: SastClient | any;
     private armClient: ArmClient | any;
+    private scaClient: ScaClient | any;
 
     private teamId = 0;
     private projectId = 0;
@@ -36,16 +42,30 @@ export class CxClient {
 
     async scan(config: ScanConfig): Promise<ScanResults> {
         this.config = config;
+        let result: ScanResults = new ScanResults(config);
+        let scaResult:SCAResults = new SCAResults();
+        if(config.enableDependencyScan){
+            this.log.info("initializing sca client");
+            await this.initScaClient();
+            this.log.info("uploading zip file to sca");
+            await this.uploadSourceCode("sca");
+            await this.scaClient.retrieveScanResults();
+            scaResult = await this.scaClient.retrieveScanResults();
+            //this.scaClient.resolveProject(config.projectName);
+        }
 
-        this.log.info('Initializing Cx client');
-        await this.initClients();
-        await this.initDynamicFields();
+        if(config.enableSastScan){
+            //TODO: Add functionality to test sast and add the sca result to the scan result and figure out the output on the client side
+            this.log.info('Initializing Cx client');
+            await this.initClients();
+            await this.initDynamicFields();
+            result = await this.createSASTScan();
 
-        let result: ScanResults = await this.createSASTScan();
-        if (config.isSyncMode) {
-            result = await this.getSASTResults(result);
-        } else {
-            this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
+            if (config.isSyncMode) {
+                result = await this.getSASTResults(result);
+            } else {
+                this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
+            }
         }
         return result;
     }
@@ -63,10 +83,28 @@ export class CxClient {
         }
     }
 
+    private async initScaClient(){
+        let setting:ScaLoginSettings = new ScaLoginSettings();
+        this.resolveScaLoginSettings(setting);
+        let scaHttp:HttpClient = new HttpClient(this.config.scaConfig.apiUrl,this.config.cxOrigin,this.log);
+        this.scaClient = new ScaClient(this.config.scaConfig,scaHttp,this.log);
+        //await this.scaClient.httpClient.scaLogin(setting);
+        await this.scaClient.scaLogin(setting);
+        await this.scaClient.resolveProject(this.config.projectName);
+    }
+
+    private resolveScaLoginSettings(setting:ScaLoginSettings){
+        const baseUrl = url.resolve(this.config.scaConfig.accessControlUrl,'');
+        setting.accessControlBaseUrl=baseUrl;
+        setting.tenant=this.config.scaConfig.tenant;
+        setting.username=this.config.scaConfig.username;
+        setting.password=this.config.scaConfig.password;
+    }
+
     private async createSASTScan(): Promise<ScanResults> {
         this.log.info('-----------------------------------Create CxSAST Scan:-----------------------------------');
         await this.updateScanSettings();
-        await this.uploadSourceCode();
+        await this.uploadSourceCode('sast');
 
         const scanResult = new ScanResults(this.config);
         scanResult.scanId = await this.sastClient.createScan(this.projectId);
@@ -122,24 +160,34 @@ export class CxClient {
         return projectId;
     }
 
-    private async uploadSourceCode(): Promise<void> {
+    private async uploadSourceCode(scanType:string): Promise<void> {
         const tempFilename = tmpNameSync({prefix: 'cxsrc-', postfix: '.zip'});
         this.log.info(`Zipping source code at ${this.config.sourceLocation} into file ${tempFilename}`);
-
-        const filter = new FilePathFilter(this.config.fileExtension, this.config.folderExclusion);
-
+        let filter:FilePathFilter;
+        if(scanType == 'sast'){
+            filter = new FilePathFilter(this.config.fileExtension, this.config.folderExclusion);
+        }else{
+            filter = new FilePathFilter(this.config.scaConfig.dependencyFileExtension, this.config.scaConfig.dependencyFolderExclusion);
+        }
         const zipper = new Zipper(this.log, filter);
         const zipResult = await zipper.zipDirectory(this.config.sourceLocation, tempFilename);
 
         if (zipResult.fileCount === 0) {
             throw new TaskSkippedError('Zip file is empty: no source to scan');
         }
-
         this.log.info(`Uploading the zipped source code.`);
         const urlPath = `projects/${this.projectId}/sourceCode/attachments`;
+        if(scanType == 'sast'){
         await this.httpClient.postMultipartRequest(urlPath,
             {id: this.projectId},
             {zippedSource: tempFilename});
+        }else if(scanType =='sca'){
+            this.log.info("uploading sca project file");
+            await this.scaClient.httpClient.postMultipartRequest( this.scaClient.ZIP_UPLOAD,
+                {projectId: this.scaClient.projectId},
+                {zipFile: tempFilename}).then((result:string)=>{this.log.info(result);
+                this.scaClient.scanId=result}).catch((reason: string) => {this.log.info(reason)});
+        }
     }
 
     private async getCurrentProjectId(): Promise<number> {
@@ -277,7 +325,7 @@ Scan results location:  ${result.sastScanResultsLink}
             versionInfo = await this.httpClient.getRequest('system/version', {suppressWarnings: true});
             this.log.info(`Checkmarx server version [${versionInfo.version}]. Hotfix [${versionInfo.hotFix}].`);
         } catch (e) {
-            versionInfo = null;
+            versionInfo = 'under9';
             this.log.info('Checkmarx server version is lower than 9.0.');
         }
         return versionInfo;

@@ -2,7 +2,7 @@ import promisePoller from "promise-poller";
 import {PollingSettings} from "../dto/pollingSettings";
 
 export class Waiter {
-    waitForTaskToFinish<T>(
+    async waitForTaskToFinish<T>(
         taskFn: () => T | PromiseLike<T>,
         progressCallback: (error: any) => void,
         polling: PollingSettings): Promise<T> {
