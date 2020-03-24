@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from "path";
 import archiver, {Archiver, ArchiverError, ProgressData} from 'archiver';
 import {Logger} from "./logger";
 import {walk} from "walk";
@@ -14,7 +15,7 @@ export default class Zipper {
     private totalAddedFiles = 0;
 
     constructor(private readonly log: Logger,
-                private readonly filenameFilter: FilePathFilter) {
+        private readonly filenameFilter: FilePathFilter) {
     }
 
     zipDirectory(srcDir: string, targetPath: string): Promise<ZipResult> {
@@ -25,16 +26,32 @@ export default class Zipper {
             this.archiver = this.createArchiver(reject);
             const zipOutput = this.createOutputStream(targetPath, resolve);
             this.archiver.pipe(zipOutput);
-            this.log.debug('Discovering files in source directory.');
-            // followLinks is set to true to conform to Common Client behavior.
-            const walker = walk(this.srcDir, {followLinks: true});
 
-            walker.on('file', this.addFileToArchive);
+            if (fs.lstatSync(this.srcDir).isDirectory()) {
+                this.log.debug('Discovering files in source directory.');
+                // followLinks is set to true to conform to Common Client behavior.
+                const walker = walk(this.srcDir, {followLinks: true});
 
-            walker.on('end', () => {
-                this.log.debug('Finished discovering files in source directory.');
-                this.archiver.finalize();
-            });
+                walker.on('file', this.addFileToArchive);
+
+                walker.on('end', () => {
+                    this.log.debug('Finished discovering files in source directory.');
+                    this.archiver.finalize();
+                });
+            } else {
+                const index: number = this.srcDir.lastIndexOf(path.sep);
+                const fileName: string = this.srcDir.substring(index + 1);
+                if (this.filenameFilter.includes(fileName)) {
+                    this.log.debug(` Add: ${this.srcDir}`);
+                    this.archiver.file(this.srcDir, {
+                        name: fileName,
+                        prefix: ''
+                    });
+                    this.archiver.finalize();
+                } else {
+                    this.log.debug(`Skip: ${this.srcDir}`);
+                }
+            }
         });
     }
 
@@ -55,7 +72,7 @@ export default class Zipper {
         return result;
     }
 
-    public createOutputStream(targetPath: string, resolve: (value: ZipResult) => void) {
+    private createOutputStream(targetPath: string, resolve: (value: ZipResult) => void) {
         const result = fs.createWriteStream(targetPath);
         result.on('close', () => {
             const zipResult: ZipResult = {

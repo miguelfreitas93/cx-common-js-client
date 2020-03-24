@@ -62,7 +62,7 @@ export class ReportingClient {
 
     private async getReport(reportId: number) {
         const reportBytes = await this.httpClient.getRequest(`reports/sastScan/${reportId}`) as Uint8Array;
-        const reportBuffer = new Buffer(reportBytes);
+        const reportBuffer = Buffer.from(reportBytes);
         return xml2js.parseStringPromise(reportBuffer);
     }
 

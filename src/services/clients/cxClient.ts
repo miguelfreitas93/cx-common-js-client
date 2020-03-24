@@ -41,7 +41,6 @@ export class CxClient {
     }
 
     async scan(config: ScanConfig): Promise<ScanResults> {
-    //async scan(config: ScanConfig) {
         this.config = config;
         let result: ScanResults = new ScanResults(config);
         let scaResult:SCAResults = new SCAResults();
@@ -68,24 +67,12 @@ export class CxClient {
                 this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
             }
         }
-
-/*        this.log.info('Initializing Cx client');
-        await this.initClients();
-        await this.initDynamicFields();
-
-        let result: ScanResults = await this.createSASTScan();*/
-        /*if (config.isSyncMode) {
-            result = await this.getSASTResults(result);
-        } else {
-            this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
-        }*/
-        result.scaResults = scaResult;
         return result;
     }
 
     private async initClients() {
         const baseUrl = url.resolve(this.config.serverUrl, 'CxRestAPI/');
-        this.httpClient = new HttpClient(baseUrl, this.log,this.config.cxOrigin);
+        this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log);
         await this.httpClient.login(this.config.username, this.config.password);
 
         this.sastClient = new SastClient(this.config, this.httpClient, this.log);
@@ -99,7 +86,7 @@ export class CxClient {
     private async initScaClient(){
         let setting:ScaLoginSettings = new ScaLoginSettings();
         this.resolveScaLoginSettings(setting);
-        let scaHttp:HttpClient = new HttpClient(this.config.scaConfig.apiUrl,this.log,this.config.cxOrigin);
+        let scaHttp:HttpClient = new HttpClient(this.config.scaConfig.apiUrl,this.config.cxOrigin,this.log);
         this.scaClient = new ScaClient(this.config.scaConfig,scaHttp,this.log);
         //await this.scaClient.httpClient.scaLogin(setting);
         await this.scaClient.scaLogin(setting);
@@ -202,46 +189,6 @@ export class CxClient {
                 this.scaClient.scanId=result}).catch((reason: string) => {this.log.info(reason)});
         }
     }
-
- /*   private async uploadSourceCodeSca(scanType:string): Promise<void> {
-        const tempFilename = tmpNameSync({prefix: 'cxsrc-', postfix: '.zip'});
-        this.log.info(`Zipping source code at ${this.config.sourceLocation} into file ${tempFilename}`);
-
-        const filter = new FilePathFilter(this.config.fileExtension, this.config.folderExclusion);
-        const zipper = new Zipper(this.log, filter);
-        const zipResult = await zipper.zipDirectory(this.config.sourceLocation, tempFilename);
-
-        const stream = fs.createWriteStream(tempFilename);
-
-
-
-        if (zipResult.fileCount === 0) {
-            throw new TaskSkippedError('Zip file is empty: no source to scan');
-        }
-        this.log.info(`Uploading the zipped source code.`);
-        const urlPath = `projects/${this.projectId}/sourceCode/attachments`;
-        if(scanType == 'sast'){
-        await this.httpClient.postMultipartRequest(urlPath,
-            {id: this.projectId},
-            {zippedSource: tempFilename});
-        }else if(scanType =='sca'){
-            this.log.info("uploading sca project file");
-
-            const req = request.post(this.config.scaConfig.apiUrl + this.scaClient.ZIP_UPLOAD);
-            req.type("from");
-            req.send({projectId:this.scaClient.projectId});
-            req.auth(this.scaClient.httpClient.accessToken,{type:"bearer"});
-            await stream.pipe(stream);
-
-            /!*await request
-                .post(this.config.scaConfig.apiUrl + this.scaClient.ZIP_UPLOAD)
-                .type("form")
-                .send({projectId:this.scaClient.projectId})
-                .field("projectId",this.scaClient.projectName)
-                .auth(this.scaClient.httpClient.accessToken,{type:"bearer"})
-                .attach(tempFilename,"application/octet-stream");*!/
-        }
-    }*/
 
     private async getCurrentProjectId(): Promise<number> {
         this.log.info(`Resolving project: ${this.config.projectName}`);
@@ -388,12 +335,27 @@ Scan results location:  ${result.sastScanResultsLink}
         const versionInfo = await this.getVersionInfo();
         this.isPolicyEnforcementSupported = !!versionInfo;
 
-        this.presetId = await this.sastClient.getPresetIdByName(this.config.presetName);
+        if (this.config.presetId) {
+            this.presetId = this.config.presetId;
+        }
+        else {
+            this.presetId = await this.sastClient.getPresetIdByName(this.config.presetName);
+        }
 
-        const teamApiClient = new TeamApiClient(this.httpClient, this.log);
-        this.teamId = await teamApiClient.getTeamIdByName(this.config.teamName);
+        if (this.config.teamId) {
+            this.teamId = this.config.teamId;
+        }
+        else {
+            const teamApiClient = new TeamApiClient(this.httpClient, this.log);
+            this.teamId = await teamApiClient.getTeamIdByName(this.config.teamName);
+        }
 
-        this.projectId = await this.getOrCreateProject();
+        if (this.config.projectId) {
+            this.projectId = this.config.projectId;
+        }
+        else {
+            this.projectId = await this.getOrCreateProject();
+        }
     }
 
     private logBuildFailure(failure: ScanSummary) {
