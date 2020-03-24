@@ -10,7 +10,7 @@ import {Logger} from "../logger";
 import {PollingSettings} from "../../dto/pollingSettings";
 
 export class SastClient {
-    private static readonly POLLING_INTERVAL_IN_SECONDS = 20;
+    private static readonly POLLING_INTERVAL_IN_SECONDS = 10;
 
     private static readonly SCAN_COMPLETED_MESSAGE = 'Scan completed';
 
