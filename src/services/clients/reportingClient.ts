@@ -22,7 +22,7 @@ export class ReportingClient {
     constructor(private readonly httpClient: HttpClient, private readonly log: Logger) {
     }
 
-    async generateReport(scanId: number,cxOrigin:String | undefined) {
+    async generateReport(scanId: number,cxOrigin:string | undefined) {
         const reportId = await this.startReportGeneration(scanId);
         await this.waitForReportGenerationToFinish(reportId,cxOrigin);
         return this.getReport(reportId);
@@ -37,7 +37,7 @@ export class ReportingClient {
         return response.reportId;
     }
 
-    private async waitForReportGenerationToFinish(reportId: number,cxOrigin:String | undefined) {
+    private async waitForReportGenerationToFinish(reportId: number,cxOrigin:string | undefined) {
         this.stopwatch.start();
 
         this.log.info(`Waiting for server to generate ${ReportingClient.REPORT_TYPE} report.`);
@@ -71,7 +71,7 @@ export class ReportingClient {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    private async checkIfReportIsCompleted(reportId: number,cxOrigin:String | undefined) {
+    private async checkIfReportIsCompleted(reportId: number,cxOrigin:string | undefined) {
         const path = `reports/sastScan/${reportId}/status`;
         let time = new Date();
         let response = await this.httpClient.getRequest(path);
