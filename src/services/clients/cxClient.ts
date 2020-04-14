@@ -278,7 +278,26 @@ export class CxClient {
 
     private async addDetailedReportToScanResults(result: ScanResults) {
         const client = new ReportingClient(this.httpClient, this.log);
-        const reportXml = await client.generateReport(result.scanId);
+        //const reportXml = await client.generateReport(result.scanId);
+        let reportXml;
+
+        if(this.config.cxOrigin == 'VSTS'){
+            for (let i = 1; i < 25; i++) {
+                try {
+                    reportXml = await client.generateReport(result.scanId,this.config.cxOrigin);
+                    if (typeof reportXml !== 'undefined' && reportXml !== null) {
+                        break;
+                    }
+                    await this.delay(15555);
+                } catch (e) {
+                    this.log.warning('Failed to generate report on attempt number: ' + i);
+                    await this.delay(15555);
+                }
+            }
+        }else{
+            reportXml = await client.generateReport(result.scanId,this.config.cxOrigin);
+        }
+
 
         const doc = reportXml.CxXMLResults;
         result.scanStart = doc.$.ScanStart;
@@ -288,6 +307,12 @@ export class CxClient {
         result.queryList = CxClient.toJsonQueries(doc.Query);
 
         // TODO: PowerShell code also adds properties such as newHighCount, but they are not used in the UI.
+    }
+
+
+    private delay(ms: number) {
+        this.log.debug("Activating delay for: " + ms);
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     private printStatistics(result: ScanResults) {
