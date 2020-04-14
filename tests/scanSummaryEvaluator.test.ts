@@ -63,6 +63,17 @@ describe("ScanSummaryEvaluator", function () {
 
 function getScanConfig(): ScanConfig {
     return {
+        cxOrigin: "JsCommon",
+        enableDependencyScan: true,
+        enableSastScan: false,
+        highThreshold: 0,
+        lowThreshold: 0,
+        mediumThreshold: 0,
+        presetId: 0,
+        projectId: 0,
+        scaConfig: undefined,
+        scanTimeoutInMinutes: 0,
+        teamId: 0,
         comment: "",
         denyProject: false,
         enablePolicyViolations: false,

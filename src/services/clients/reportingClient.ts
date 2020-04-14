@@ -22,9 +22,9 @@ export class ReportingClient {
     constructor(private readonly httpClient: HttpClient, private readonly log: Logger) {
     }
 
-    async generateReport(scanId: number) {
+    async generateReport(scanId: number,cxOrigin:string | undefined) {
         const reportId = await this.startReportGeneration(scanId);
-        await this.waitForReportGenerationToFinish(reportId);
+        await this.waitForReportGenerationToFinish(reportId,cxOrigin);
         return this.getReport(reportId);
     }
 
@@ -37,7 +37,7 @@ export class ReportingClient {
         return response.reportId;
     }
 
-    private async waitForReportGenerationToFinish(reportId: number) {
+    private async waitForReportGenerationToFinish(reportId: number,cxOrigin:string | undefined) {
         this.stopwatch.start();
 
         this.log.info(`Waiting for server to generate ${ReportingClient.REPORT_TYPE} report.`);
@@ -45,7 +45,7 @@ export class ReportingClient {
         try {
             const waiter = new Waiter();
             lastStatus = await waiter.waitForTaskToFinish(
-                () => this.checkIfReportIsCompleted(reportId),
+                () => this.checkIfReportIsCompleted(reportId,cxOrigin),
                 this.logWaitingProgress,
                 ReportingClient.pollingSettings
             );
@@ -66,10 +66,32 @@ export class ReportingClient {
         return xml2js.parseStringPromise(reportBuffer);
     }
 
-    private async checkIfReportIsCompleted(reportId: number) {
+    private delay(ms: number) {
+        this.log.debug("Activating delay for: " + ms);
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    private async checkIfReportIsCompleted(reportId: number,cxOrigin:string | undefined) {
         const path = `reports/sastScan/${reportId}/status`;
-        const response = await this.httpClient.getRequest(path);
-        const status = response.status.value;
+        let time = new Date();
+        let response = await this.httpClient.getRequest(path);
+        let status = response.status.value;
+
+        if(cxOrigin=="VSTS"){
+            if (status === ReportStatus.Failed) {
+                this.log.warning("Failed on first report status request");
+                for (let i = 1; i < 5; i++) {
+                    await this.delay(5555);
+                    response = await this.httpClient.getRequest(path);
+                    status = response.status.value;
+                    time = new Date();
+                    this.log.warning("Time " + time.getHours() + ":" + time.getMinutes() + ":" + time.getSeconds() + ": Scan status of request number: " + (i + 1) + ": [" + status + "], requested path: + " + path);
+                    if (status !== ReportStatus.Failed) {
+                        break;
+                    }
+                }
+            }
+        }
 
         const isCompleted =
             status === ReportStatus.Deleted ||
