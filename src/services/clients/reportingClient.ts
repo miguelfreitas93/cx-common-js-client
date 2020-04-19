@@ -24,6 +24,7 @@ export class ReportingClient {
 
     async generateReport(scanId: number,cxOrigin:string | undefined) {
         const reportId = await this.startReportGeneration(scanId);
+        this.log.debug('report ID: ' + reportId);
         await this.waitForReportGenerationToFinish(reportId,cxOrigin);
         return this.getReport(reportId);
     }
