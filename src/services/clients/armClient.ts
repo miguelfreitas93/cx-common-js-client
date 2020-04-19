@@ -48,7 +48,7 @@ export class ArmClient {
         }
 
         if (lastStatus !== ArmStatus.Finished) {
-            throw Error(`Generation of scan report [id=${projectId}] failed.`);
+            throw Error(`CxArm doesn\'t exist ,Generation of scan report [id=${projectId}] failed.`);
         }
     }
 
@@ -67,11 +67,20 @@ export class ArmClient {
             status === ArmStatus.Failed ||
             status === ArmStatus.None;
 
+        const noCxArm =
+            status === ArmStatus.Syncing;
+
+
+        if(noCxArm){
+            return Promise.resolve(status);
+        }
+
         if (isCompleted) {
             return Promise.resolve(status);
         } else {
             return Promise.reject(status);
         }
+
     };
 
     private logWaitingProgress = (armStatus: ArmStatus) => {
