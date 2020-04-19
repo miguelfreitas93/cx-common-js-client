@@ -48,7 +48,7 @@ export class ArmClient {
         }
 
         if (lastStatus !== ArmStatus.Finished) {
-            throw Error(`CxArm doesn\'t exist ,Generation of scan report [id=${projectId}] failed.`);
+            throw Error(`CxArm doesn\'t exist, Generation of scan report [id=${projectId}] failed.`);
         }
     }
 
