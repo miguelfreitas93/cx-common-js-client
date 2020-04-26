@@ -40,6 +40,13 @@ export class HttpClient {
         return this.loginWithStoredCredentials();
     }
 
+    logout() {
+        this.log.info('Logging out from Checkmarx service.');
+        this.accessToken = '';
+        this.username = '';
+        this.password = '';
+    }
+
     getRequest(relativePath: string, options?: RequestOptions): Promise<any> {
         const internalOptions: InternalRequestOptions = {retry: true, method: 'get'};
         return this.sendRequest(relativePath, Object.assign(internalOptions, options));
