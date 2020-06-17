@@ -1,5 +1,6 @@
 trigger:
 - master
+- feature/new-sca-integration
 
 pool:
   vmImage: ubuntu-latest
