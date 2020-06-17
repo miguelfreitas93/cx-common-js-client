@@ -1,13 +1,13 @@
-import {ScanRequest} from "../../dto/api/scanRequest";
-import {ScanConfig} from "../..";
-import {HttpClient} from "./httpClient";
-import {ScanStatus} from "../../dto/api/scanStatus";
-import {ScanStage} from "../../dto/api/scanStage";
-import {Stopwatch} from "../stopwatch";
-import {UpdateScanSettingsRequest} from "../../dto/api/updateScanSettingsRequest";
-import {Waiter} from "../waiter";
-import {Logger} from "../logger";
-import {PollingSettings} from "../../dto/pollingSettings";
+import { ScanRequest } from "../../dto/api/scanRequest";
+import { ScanConfig } from "../..";
+import { HttpClient } from "./httpClient";
+import { ScanStatus } from "../../dto/api/scanStatus";
+import { ScanStage } from "../../dto/api/scanStage";
+import { Stopwatch } from "../stopwatch";
+import { UpdateScanSettingsRequest } from "../../dto/api/updateScanSettingsRequest";
+import { Waiter } from "../waiter";
+import { Logger } from "../logger";
+import { PollingSettings } from "../../dto/pollingSettings";
 
 export class SastClient {
     private static readonly POLLING_INTERVAL_IN_SECONDS = 10;
@@ -19,8 +19,8 @@ export class SastClient {
     private scanId: number = 0;
 
     constructor(private readonly config: ScanConfig,
-                private readonly httpClient: HttpClient,
-                private readonly log: Logger) {
+        private readonly httpClient: HttpClient,
+        private readonly log: Logger) {
     }
 
     async getPresetIdByName(presetName: string) {

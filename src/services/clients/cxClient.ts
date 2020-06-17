@@ -1,23 +1,21 @@
-import {ScanConfig} from "../..";
-import {HttpClient} from "./httpClient";
+import { ScanConfig } from "../..";
+import { HttpClient } from "./httpClient";
 import Zipper from "../zipper";
-import {TaskSkippedError} from "../..";
-import {ScanResults} from "../..";
-import {SastClient} from "./sastClient";
+import { TaskSkippedError } from "../..";
+import { ScanResults } from "../..";
+import { SastClient } from "./sastClient";
 import * as url from "url";
-import {ArmClient} from "./armClient";
-import {UpdateScanSettingsRequest} from "../../dto/api/updateScanSettingsRequest";
-import {Logger} from "../logger";
-import {ReportingClient} from "./reportingClient";
-import {ScanSummaryEvaluator} from "../scanSummaryEvaluator";
-import {FilePathFilter} from "../filePathFilter";
-import {TeamApiClient} from "./teamApiClient";
-import {ScanSummary} from "../../dto/scanSummary";
-import {ThresholdError} from "../../dto/thresholdError";
-import {tmpNameSync} from "tmp";
-import {ScaClient} from "./scaClient";
-import {ScaLoginSettings} from "../../dto/scaLoginSettings";
-import {SCAResults} from "../../dto/scaResults";
+import { ArmClient } from "./armClient";
+import { UpdateScanSettingsRequest } from "../../dto/api/updateScanSettingsRequest";
+import { Logger } from "../logger";
+import { ReportingClient } from "./reportingClient";
+import { ScanSummaryEvaluator } from "../scanSummaryEvaluator";
+import { FilePathFilter } from "../filePathFilter";
+import { TeamApiClient } from "./teamApiClient";
+import { ScanSummary } from "../../dto/scanSummary";
+import { ThresholdError } from "../../dto/thresholdError";
+import { tmpNameSync } from "tmp";
+import { ScaClient } from "./scaClient";
 
 /**
  * High-level CX API client that uses specialized clients internally.
@@ -41,16 +39,14 @@ export class CxClient {
     async scan(config: ScanConfig): Promise<ScanResults> {
         this.config = config;
         let result: ScanResults = new ScanResults(config);
-        let scaResult:SCAResults = new SCAResults();
-        if(config.enableDependencyScan){
-            this.log.info("initializing sca client");
+        if (config.enableDependencyScan) {
+            this.log.info("Initializing CxSCA client");
             await this.initScaClient();
-            this.log.info("uploading zip file to sca");
-            await this.uploadSourceCode("sca");
-            scaResult = await this.scaClient.retrieveScanResults();
+            await this.scaClient.createScan();
+            await this.scaClient.waitForScanResults(result);
         }
 
-        if(config.enableSastScan){
+        if (config.enableSastScan) {
             //TODO: Add functionality to test sast and add the sca result to the scan result and figure out the output on the client side
             this.log.info('Initializing Cx client');
             await this.initClients();
@@ -63,7 +59,6 @@ export class CxClient {
                 this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
             }
         }
-        result.scaResults=scaResult;
         return result;
     }
 
@@ -80,28 +75,17 @@ export class CxClient {
         }
     }
 
-    private async initScaClient(){
-        let setting:ScaLoginSettings = new ScaLoginSettings();
-        this.resolveScaLoginSettings(setting);
-        let scaHttp:HttpClient = new HttpClient(this.config.scaConfig.apiUrl,this.config.cxOrigin,this.log);
-        this.scaClient = new ScaClient(this.config.scaConfig,scaHttp,this.log);
-        //await this.scaClient.httpClient.scaLogin(setting);
-        await this.scaClient.scaLogin(setting);
+    private async initScaClient() {
+        const scaHttpClient: HttpClient = new HttpClient(this.config.scaConfig.apiUrl, this.config.cxOrigin, this.log);
+        this.scaClient = new ScaClient(this.config.scaConfig, this.config.sourceLocation, scaHttpClient, this.log);
+        await this.scaClient.scaLogin(this.config.scaConfig);
         await this.scaClient.resolveProject(this.config.projectName);
     }
 
-    private resolveScaLoginSettings(setting:ScaLoginSettings){
-        const baseUrl = url.resolve(this.config.scaConfig.accessControlUrl,'');
-        setting.accessControlBaseUrl=baseUrl;
-        setting.tenant=this.config.scaConfig.tenant;
-        setting.username=this.config.scaConfig.username;
-        setting.password=this.config.scaConfig.password;
-    }
-
-    private async createSASTScan(scanResult:ScanResults): Promise<ScanResults> {
+    private async createSASTScan(scanResult: ScanResults): Promise<ScanResults> {
         this.log.info('-----------------------------------Create CxSAST Scan:-----------------------------------');
         await this.updateScanSettings();
-        await this.uploadSourceCode('sast');
+        await this.uploadSourceCode();
 
         scanResult.scanId = await this.sastClient.createScan(this.projectId);
 
@@ -156,34 +140,21 @@ export class CxClient {
         return projectId;
     }
 
-    private async uploadSourceCode(scanType:string): Promise<void> {
-        const tempFilename = tmpNameSync({prefix: 'cxsrc-', postfix: '.zip'});
+    private async uploadSourceCode(): Promise<void> {
+        const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
         this.log.info(`Zipping source code at ${this.config.sourceLocation} into file ${tempFilename}`);
-        let filter:FilePathFilter;
-        if(scanType == 'sast'){
-            filter = new FilePathFilter(this.config.fileExtension, this.config.folderExclusion);
-        }else{
-            filter = new FilePathFilter(this.config.scaConfig.dependencyFileExtension, this.config.scaConfig.dependencyFolderExclusion);
-        }
+        let filter: FilePathFilter;
+        filter = new FilePathFilter(this.config.fileExtension, this.config.folderExclusion);
         const zipper = new Zipper(this.log, filter);
         const zipResult = await zipper.zipDirectory(this.config.sourceLocation, tempFilename);
-
         if (zipResult.fileCount === 0) {
             throw new TaskSkippedError('Zip file is empty: no source to scan');
         }
         this.log.info(`Uploading the zipped source code.`);
         const urlPath = `projects/${this.projectId}/sourceCode/attachments`;
-        if(scanType == 'sast'){
         await this.httpClient.postMultipartRequest(urlPath,
-            {id: this.projectId},
-            {zippedSource: tempFilename});
-        }else if(scanType =='sca'){
-            this.log.info("uploading sca project file");
-            await this.scaClient.httpClient.postMultipartRequest( this.scaClient.ZIP_UPLOAD,
-                {projectId: this.scaClient.projectId},
-                {zipFile: tempFilename}).then((result:string)=>{this.log.info(result);
-                this.scaClient.scanId=result}).catch((reason: string) => {this.log.info(reason)});
-        }
+            { id: this.projectId },
+            { zippedSource: tempFilename });
     }
 
     private async getCurrentProjectId(): Promise<number> {
@@ -192,7 +163,7 @@ export class CxClient {
         const encodedName = encodeURIComponent(this.config.projectName);
         const path = `projects?projectname=${encodedName}&teamid=${this.teamId}`;
         try {
-            const projects = await this.httpClient.getRequest(path, {suppressWarnings: true});
+            const projects = await this.httpClient.getRequest(path, { suppressWarnings: true });
             if (projects && projects.length) {
                 result = projects[0].id;
             }
@@ -281,10 +252,10 @@ export class CxClient {
         //const reportXml = await client.generateReport(result.scanId);
         let reportXml;
 
-        if(this.config.cxOrigin == 'VSTS'){
+        if (this.config.cxOrigin == 'VSTS') {
             for (let i = 1; i < 25; i++) {
                 try {
-                    reportXml = await client.generateReport(result.scanId,this.config.cxOrigin);
+                    reportXml = await client.generateReport(result.scanId, this.config.cxOrigin);
                     if (typeof reportXml !== 'undefined' && reportXml !== null) {
                         break;
                     }
@@ -294,8 +265,8 @@ export class CxClient {
                     await this.delay(15555);
                 }
             }
-        }else{
-            reportXml = await client.generateReport(result.scanId,this.config.cxOrigin);
+        } else {
+            reportXml = await client.generateReport(result.scanId, this.config.cxOrigin);
         }
 
 
@@ -343,7 +314,7 @@ Scan results location:  ${result.sastScanResultsLink}
     private async getVersionInfo() {
         let versionInfo = null;
         try {
-            versionInfo = await this.httpClient.getRequest('system/version', {suppressWarnings: true});
+            versionInfo = await this.httpClient.getRequest('system/version', { suppressWarnings: true });
             this.log.info(`Checkmarx server version [${versionInfo.version}]. Hotfix [${versionInfo.hotFix}].`);
         } catch (e) {
             versionInfo = 'under9';

@@ -1,7 +1,7 @@
-import {ScanSummaryEvaluator} from "../src/services/scanSummaryEvaluator";
-import {ScanResults} from "../src";
-import {ScanConfig} from "../src";
-import {Logger} from "../src";
+import { ScanSummaryEvaluator } from "../src/services/scanSummaryEvaluator";
+import { ScanResults } from "../src";
+import { ScanConfig } from "../src";
+import { Logger } from "../src";
 import * as assert from "assert";
 
 describe("ScanSummaryEvaluator", function () {
@@ -41,7 +41,7 @@ describe("ScanSummaryEvaluator", function () {
         assert.equal(summary.thresholdErrors.length, 2);
     });
 
-    it('should not return threshold errors if all values are below thresholds', function(){
+    it('should not return threshold errors if all values are below thresholds', function () {
         const config = getScanConfig();
         config.highThreshold = 10;
         config.mediumThreshold = 15;

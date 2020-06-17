@@ -1,4 +1,4 @@
-import {ScaConfig} from "./scaConfig";
+import { ScaConfig } from "./sca/scaConfig";
 
 export interface ScanConfig {
     enableSastScan: boolean;

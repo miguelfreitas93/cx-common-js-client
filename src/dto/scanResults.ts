@@ -1,5 +1,5 @@
-import {ScanConfig} from "./scanConfig";
-import {SCAResults} from "./scaResults";
+import { ScanConfig } from "./scanConfig";
+import { ScaReportResults } from "./sca/scaReportResults";
 
 /**
  * Most OSA-related fields are currently not in use.
@@ -63,7 +63,7 @@ export class ScanResults {
     // newInfoCount = 0;
 
     //SCA Results
-    scaResults?:SCAResults;
+    scaResults?: ScaReportResults;
 
     queryList = '';
     osaStartTime = '';  // E.g. "2019-10-27T12:22:50.223"

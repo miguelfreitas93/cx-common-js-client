@@ -1,10 +1,10 @@
 import * as fs from 'fs';
 import * as path from "path";
-import archiver, {Archiver, ArchiverError, ProgressData} from 'archiver';
-import {Logger} from "./logger";
-import {walk} from "walk";
-import {FilePathFilter} from "./filePathFilter";
-import {ZipResult} from "../dto/zipResult";
+import archiver, { Archiver, ArchiverError, ProgressData } from 'archiver';
+import { Logger } from "./logger";
+import { walk } from "walk";
+import { FilePathFilter } from "./filePathFilter";
+import { ZipResult } from "../dto/zipResult";
 import * as upath from 'upath';
 
 export default class Zipper {
@@ -30,7 +30,7 @@ export default class Zipper {
             if (fs.lstatSync(this.srcDir).isDirectory()) {
                 this.log.debug('Discovering files in source directory.');
                 // followLinks is set to true to conform to Common Client behavior.
-                const walker = walk(this.srcDir, {followLinks: true});
+                const walker = walk(this.srcDir, { followLinks: true });
 
                 walker.on('file', this.addFileToArchive);
 
@@ -56,7 +56,7 @@ export default class Zipper {
     }
 
     private createArchiver(reject: any) {
-        const result = archiver('zip', {zlib: {level: 9}});
+        const result = archiver('zip', { zlib: { level: 9 } });
 
         result.on('warning', (err: ArchiverError) => {
             this.log.warning(`Archiver: ${err.message}`);

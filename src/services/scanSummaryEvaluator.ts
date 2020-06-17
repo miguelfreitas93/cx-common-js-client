@@ -1,13 +1,13 @@
-import {Logger} from "./logger";
-import {ScanResults} from "..";
-import {ScanConfig} from "..";
-import {ScanSummary} from "../dto/scanSummary";
-import {ThresholdError} from "../dto/thresholdError";
+import { Logger } from "./logger";
+import { ScanResults } from "..";
+import { ScanConfig } from "..";
+import { ScanSummary } from "../dto/scanSummary";
+import { ThresholdError } from "../dto/thresholdError";
 
 export class ScanSummaryEvaluator {
     constructor(private readonly config: ScanConfig,
-                private readonly log: Logger,
-                private readonly isPolicyEnforcementSupported: boolean) {
+        private readonly log: Logger,
+        private readonly isPolicyEnforcementSupported: boolean) {
     }
 
     /**
@@ -55,9 +55,9 @@ export class ScanSummaryEvaluator {
     }
 
     private static addThresholdErrors(amountToCheck: number,
-                                      threshold: number | undefined,
-                                      severity: string,
-                                      target: ThresholdError[]) {
+        threshold: number | undefined,
+        severity: string,
+        target: ThresholdError[]) {
         if (typeof threshold !== 'undefined') {
             if (threshold < 0) {
                 throw Error('Threshold must be 0 or greater');

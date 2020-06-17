@@ -1,9 +1,9 @@
-import {Logger} from "../logger";
-import {HttpClient} from "./httpClient";
+import { Logger } from "../logger";
+import { HttpClient } from "./httpClient";
 
 export class TeamApiClient {
     constructor(private readonly httpClient: HttpClient,
-                private readonly log: Logger) {
+        private readonly log: Logger) {
     }
 
     async getTeamIdByName(teamName: string) {

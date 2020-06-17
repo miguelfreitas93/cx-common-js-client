@@ -1,9 +1,9 @@
-import {HttpClient} from "./httpClient";
-import {Logger} from "../logger";
-import {Waiter} from "../waiter";
-import {ReportStatus} from "../../dto/api/reportStatus";
-import {PollingSettings} from "../../dto/pollingSettings";
-import {Stopwatch} from "../stopwatch";
+import { HttpClient } from "./httpClient";
+import { Logger } from "../logger";
+import { Waiter } from "../waiter";
+import { ReportStatus } from "../../dto/api/reportStatus";
+import { PollingSettings } from "../../dto/pollingSettings";
+import { Stopwatch } from "../stopwatch";
 import * as xml2js from "xml2js";
 
 /**
@@ -22,10 +22,10 @@ export class ReportingClient {
     constructor(private readonly httpClient: HttpClient, private readonly log: Logger) {
     }
 
-    async generateReport(scanId: number,cxOrigin:string | undefined) {
+    async generateReport(scanId: number, cxOrigin: string | undefined) {
         const reportId = await this.startReportGeneration(scanId);
         this.log.debug('report ID: ' + reportId);
-        await this.waitForReportGenerationToFinish(reportId,cxOrigin);
+        await this.waitForReportGenerationToFinish(reportId, cxOrigin);
         return this.getReport(reportId);
     }
 
@@ -38,7 +38,7 @@ export class ReportingClient {
         return response.reportId;
     }
 
-    private async waitForReportGenerationToFinish(reportId: number,cxOrigin:string | undefined) {
+    private async waitForReportGenerationToFinish(reportId: number, cxOrigin: string | undefined) {
         this.stopwatch.start();
 
         this.log.info(`Waiting for server to generate ${ReportingClient.REPORT_TYPE} report.`);
@@ -46,7 +46,7 @@ export class ReportingClient {
         try {
             const waiter = new Waiter();
             lastStatus = await waiter.waitForTaskToFinish(
-                () => this.checkIfReportIsCompleted(reportId,cxOrigin),
+                () => this.checkIfReportIsCompleted(reportId, cxOrigin),
                 this.logWaitingProgress,
                 ReportingClient.pollingSettings
             );
@@ -72,13 +72,13 @@ export class ReportingClient {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    private async checkIfReportIsCompleted(reportId: number,cxOrigin:string | undefined) {
+    private async checkIfReportIsCompleted(reportId: number, cxOrigin: string | undefined) {
         const path = `reports/sastScan/${reportId}/status`;
         let time = new Date();
         let response = await this.httpClient.getRequest(path);
         let status = response.status.value;
 
-        if(cxOrigin=="VSTS"){
+        if (cxOrigin == "VSTS") {
             if (status === ReportStatus.Failed) {
                 this.log.warning("Failed on first report status request");
                 for (let i = 1; i < 5; i++) {

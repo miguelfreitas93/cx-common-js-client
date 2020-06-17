@@ -1,5 +1,5 @@
 import promisePoller from "promise-poller";
-import {PollingSettings} from "../dto/pollingSettings";
+import { PollingSettings } from "../dto/pollingSettings";
 
 export class Waiter {
     waitForTaskToFinish<T>(

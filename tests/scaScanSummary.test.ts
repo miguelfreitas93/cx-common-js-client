@@ -1,9 +1,9 @@
-import {ScanSummaryEvaluator} from "../src/services/scanSummaryEvaluator";
-import {HttpClient, ScaConfig, ScanResults} from "../src";
-import {ScanConfig} from "../src";
-import {Logger} from "../src";
+import { ScanSummaryEvaluator } from "../src/services/scanSummaryEvaluator";
+import { HttpClient, ScaConfig, ScanResults } from "../src";
+import { ScanConfig } from "../src";
+import { Logger } from "../src";
 import * as assert from "assert";
-import {ScaClient} from "../src/services/clients/scaClient";
+import { ScaClient } from "../src/services/clients/scaClient";
 
 describe("ScaScanSummary", function () {
     it('a result should be returned', function () {
@@ -23,10 +23,10 @@ describe("ScaScanSummary", function () {
         assert.deepStrictEqual(summary.policyCheck.violatedPolicyNames, scanResults.sastPolicies);
     });
 
-    it(' an error should be thrown',function () {
+    it(' an error should be thrown', function () {
         const config = getScanConfig();
         config.scaConfig = getScaConfig();
-        const scaClient = new ScaClient(config.scaConfig,new HttpClient(),getDummyLogger())
+        const scaClient = new ScaClient(config.scaConfig, new HttpClient(), getDummyLogger())
     });
 
     it('should return threshold errors in summary', function () {
@@ -48,7 +48,7 @@ describe("ScaScanSummary", function () {
         assert.equal(summary.thresholdErrors.length, 2);
     });
 
-    it('should not return threshold errors if all values are below thresholds', function(){
+    it('should not return threshold errors if all values are below thresholds', function () {
         const config = getScanConfig();
         config.highThreshold = 10;
         config.mediumThreshold = 15;

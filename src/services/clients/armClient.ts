@@ -1,11 +1,11 @@
-import {HttpClient} from "./httpClient";
-import {ArmStatus} from "../../dto/api/armStatus";
-import {Stopwatch} from "../stopwatch";
-import {ScanProvider} from "../../dto/api/scanProvider";
-import {Waiter} from "../waiter";
-import {PolicyViolationGroup} from "../../dto/api/policyViolationGroup";
-import {Logger} from "../logger";
-import {PollingSettings} from "../../dto/pollingSettings";
+import { HttpClient } from "./httpClient";
+import { ArmStatus } from "../../dto/api/armStatus";
+import { Stopwatch } from "../stopwatch";
+import { ScanProvider } from "../../dto/api/scanProvider";
+import { Waiter } from "../waiter";
+import { PolicyViolationGroup } from "../../dto/api/policyViolationGroup";
+import { Logger } from "../logger";
+import { PollingSettings } from "../../dto/pollingSettings";
 
 /**
  * Works with policy-related APIs.
@@ -54,13 +54,13 @@ export class ArmClient {
 
     getProjectViolations(projectId: number, provider: ScanProvider): Promise<PolicyViolationGroup[]> {
         const path = `/cxarm/policymanager/projects/${projectId}/violations?provider=${provider}`;
-        return this.httpClient.getRequest(path, {baseUrlOverride: this.armUrl});
+        return this.httpClient.getRequest(path, { baseUrlOverride: this.armUrl });
     }
 
     private async checkIfPolicyVerificationCompleted(projectId: number) {
         const path = `sast/projects/${projectId}/publisher/policyFindings/status`;
         const statusResponse = await this.httpClient.getRequest(path) as { status: ArmStatus };
-        const {status} = statusResponse;
+        const { status } = statusResponse;
 
         const isCompleted =
             status === ArmStatus.Finished ||
@@ -71,7 +71,7 @@ export class ArmClient {
             status === ArmStatus.Syncing;
 
 
-        if(noCxArm){
+        if (noCxArm) {
             return Promise.resolve(status);
         }
 
