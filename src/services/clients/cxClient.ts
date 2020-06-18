@@ -16,6 +16,7 @@ import { ScanSummary } from "../../dto/scanSummary";
 import { ThresholdError } from "../../dto/thresholdError";
 import { tmpNameSync } from "tmp";
 import { ScaClient } from "./scaClient";
+import { SastConfig } from '../../dto/sastConfig';
 
 /**
  * High-level CX API client that uses specialized clients internally.
@@ -32,13 +33,31 @@ export class CxClient {
     private isPolicyEnforcementSupported = false;
 
     private config: ScanConfig | any;
+    private sastConfig: SastConfig | any;
 
     constructor(private readonly log: Logger) {
     }
 
     async scan(config: ScanConfig): Promise<ScanResults> {
         this.config = config;
-        let result: ScanResults = new ScanResults(config);
+        this.sastConfig = config.sastConfig;
+        let result: ScanResults = new ScanResults();
+
+        if (config.enableSastScan) {
+            //TODO: Add functionality to test sast and add the sca result to the scan result and figure out the output on the client side
+            result.updateSastDefaultResults(this.sastConfig);
+            this.log.info('Initializing Cx client');
+            await this.initClients();
+            await this.initDynamicFields();
+            result = await this.createSASTScan(result);
+
+            if (this.sastConfig.isSyncMode) {
+                result = await this.getSASTResults(result);
+            } else {
+                this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
+            }
+        }
+
         if (config.enableDependencyScan) {
             this.log.info("Initializing CxSCA client");
             await this.initScaClient();
@@ -46,31 +65,18 @@ export class CxClient {
             await this.scaClient.waitForScanResults(result);
         }
 
-        if (config.enableSastScan) {
-            //TODO: Add functionality to test sast and add the sca result to the scan result and figure out the output on the client side
-            this.log.info('Initializing Cx client');
-            await this.initClients();
-            await this.initDynamicFields();
-            result = await this.createSASTScan(result);
-
-            if (config.isSyncMode) {
-                result = await this.getSASTResults(result);
-            } else {
-                this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
-            }
-        }
         return result;
     }
 
     private async initClients() {
-        const baseUrl = url.resolve(this.config.serverUrl, 'CxRestAPI/');
+        const baseUrl = url.resolve(this.sastConfig.serverUrl, 'CxRestAPI/');
         this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log);
-        await this.httpClient.login(this.config.username, this.config.password);
+        await this.httpClient.login(this.sastConfig.username, this.sastConfig.password);
 
-        this.sastClient = new SastClient(this.config, this.httpClient, this.log);
+        this.sastClient = new SastClient(this.sastConfig, this.httpClient, this.log);
 
         this.armClient = new ArmClient(this.httpClient, this.log);
-        if (this.config.enablePolicyViolations) {
+        if (this.sastConfig.enablePolicyViolations) {
             await this.armClient.init();
         }
     }
@@ -89,7 +95,7 @@ export class CxClient {
 
         scanResult.scanId = await this.sastClient.createScan(this.projectId);
 
-        const projectStateUrl = url.resolve(this.config.serverUrl, `CxWebClient/portal#/projectState/${this.projectId}/Summary`);
+        const projectStateUrl = url.resolve(this.sastConfig.serverUrl, `CxWebClient/portal#/projectState/${this.projectId}/Summary`);
         this.log.info(`SAST scan created successfully. CxLink to project state: ${projectStateUrl}`);
 
         return scanResult;
@@ -108,7 +114,7 @@ export class CxClient {
 
         await this.addDetailedReportToScanResults(result);
 
-        const evaluator = new ScanSummaryEvaluator(this.config, this.log, this.isPolicyEnforcementSupported);
+        const evaluator = new ScanSummaryEvaluator(this.sastConfig, this.log, this.isPolicyEnforcementSupported);
         const summary = evaluator.getScanSummary(result);
 
         this.logPolicyCheckSummary(summary.policyCheck);
@@ -128,7 +134,7 @@ export class CxClient {
         } else {
             this.log.info('Project not found, creating a new one.');
 
-            if (this.config.denyProject) {
+            if (this.sastConfig.denyProject) {
                 throw Error(
                     `Creation of the new project [${this.config.projectName}] is not authorized. Please use an existing project.` +
                     " You can enable the creation of new projects by disabling the Deny new Checkmarx projects creation checkbox in the Checkmarx plugin global settings.");
@@ -144,7 +150,7 @@ export class CxClient {
         const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
         this.log.info(`Zipping source code at ${this.config.sourceLocation} into file ${tempFilename}`);
         let filter: FilePathFilter;
-        filter = new FilePathFilter(this.config.fileExtension, this.config.folderExclusion);
+        filter = new FilePathFilter(this.sastConfig.fileExtension, this.sastConfig.folderExclusion);
         const zipper = new Zipper(this.log, filter);
         const zipResult = await zipper.zipDirectory(this.config.sourceLocation, tempFilename);
         if (zipResult.fileCount === 0) {
@@ -180,7 +186,7 @@ export class CxClient {
         const request = {
             name: this.config.projectName,
             owningTeam: this.teamId,
-            isPublic: this.config.isPublic
+            isPublic: this.sastConfig.isPublic
         };
 
         const newProject = await this.httpClient.postRequest('projects', request);
@@ -206,7 +212,7 @@ export class CxClient {
     }
 
     private async addPolicyViolationsToScanResults(result: ScanResults) {
-        if (!this.config.enablePolicyViolations) {
+        if (!this.sastConfig.enablePolicyViolations) {
             return;
         }
 
@@ -239,17 +245,16 @@ export class CxClient {
         result.infoResults = statistics.infoSeverity;
 
         const sastScanPath = `CxWebClient/ViewerMain.aspx?scanId=${result.scanId}&ProjectID=${this.projectId}`;
-        result.sastScanResultsLink = url.resolve(this.config.serverUrl, sastScanPath);
+        result.sastScanResultsLink = url.resolve(this.sastConfig.serverUrl, sastScanPath);
 
         const sastProjectLink = `CxWebClient/portal#/projectState/${this.projectId}/Summary`;
-        result.sastSummaryResultsLink = url.resolve(this.config.serverUrl, sastProjectLink);
+        result.sastSummaryResultsLink = url.resolve(this.sastConfig.serverUrl, sastProjectLink);
 
         result.sastResultsReady = true;
     }
 
     private async addDetailedReportToScanResults(result: ScanResults) {
         const client = new ReportingClient(this.httpClient, this.log);
-        //const reportXml = await client.generateReport(result.scanId);
         let reportXml;
 
         if (this.config.cxOrigin == 'VSTS') {
@@ -268,7 +273,6 @@ export class CxClient {
         } else {
             reportXml = await client.generateReport(result.scanId, this.config.cxOrigin);
         }
-
 
         const doc = reportXml.CxXMLResults;
         result.scanStart = doc.$.ScanStart;
@@ -327,19 +331,19 @@ Scan results location:  ${result.sastScanResultsLink}
         const versionInfo = await this.getVersionInfo();
         this.isPolicyEnforcementSupported = !!versionInfo;
 
-        if (this.config.presetId) {
-            this.presetId = this.config.presetId;
+        if (this.sastConfig.presetId) {
+            this.presetId = this.sastConfig.presetId;
         }
         else {
-            this.presetId = await this.sastClient.getPresetIdByName(this.config.presetName);
+            this.presetId = await this.sastClient.getPresetIdByName(this.sastConfig.presetName);
         }
 
-        if (this.config.teamId) {
-            this.teamId = this.config.teamId;
+        if (this.sastConfig.teamId) {
+            this.teamId = this.sastConfig.teamId;
         }
         else {
             const teamApiClient = new TeamApiClient(this.httpClient, this.log);
-            this.teamId = await teamApiClient.getTeamIdByName(this.config.teamName);
+            this.teamId = await teamApiClient.getTeamIdByName(this.sastConfig.teamName);
         }
 
         if (this.config.projectId) {

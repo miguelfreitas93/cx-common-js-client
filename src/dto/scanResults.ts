@@ -1,4 +1,4 @@
-import { ScanConfig } from "./scanConfig";
+import { SastConfig } from "./sastConfig";
 import { ScaReportResults } from "./sca/scaReportResults";
 
 /**
@@ -8,15 +8,15 @@ import { ScaReportResults } from "./sca/scaReportResults";
 export class ScanResults {
     buildFailed = false;
     errorOccurred = false;
-    url: string;
-    syncMode: boolean;
+    url: string = '';
+    syncMode: boolean = false;
     osaEnabled = false;
-    enablePolicyViolations: boolean;
+    enablePolicyViolations: boolean = false;
     osaThresholdExceeded = false;
     sastThresholdExceeded = false;
     sastResultsReady = false;
     scanId = 0;
-    thresholdEnabled: boolean;
+    thresholdEnabled: boolean = false;
 
     highThreshold: number | undefined;
     mediumThreshold: number | undefined;
@@ -75,13 +75,16 @@ export class ScanResults {
     osaVulnerableLibraries = 0;
     osaOkLibraries = 0;
 
-    constructor(config: ScanConfig) {
-        this.url = config.serverUrl;
-        this.syncMode = config.isSyncMode;
-        this.enablePolicyViolations = config.enablePolicyViolations;
-        this.thresholdEnabled = config.vulnerabilityThreshold;
-        this.highThreshold = config.highThreshold;
-        this.mediumThreshold = config.mediumThreshold;
-        this.lowThreshold = config.lowThreshold;
+    public updateSastDefaultResults(sastConfig: SastConfig) {
+        this.url = sastConfig.serverUrl;
+        this.syncMode = sastConfig.isSyncMode;
+        this.enablePolicyViolations = sastConfig.enablePolicyViolations;
+        this.thresholdEnabled = sastConfig.vulnerabilityThreshold;
+        this.highThreshold = sastConfig.highThreshold;
+        this.mediumThreshold = sastConfig.mediumThreshold;
+        this.lowThreshold = sastConfig.lowThreshold;
+    }
+
+    constructor() {
     }
 }

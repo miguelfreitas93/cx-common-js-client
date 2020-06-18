@@ -1,11 +1,11 @@
 import { Logger } from "./logger";
 import { ScanResults } from "..";
-import { ScanConfig } from "..";
+import { SastConfig } from "../dto/sastConfig";
 import { ScanSummary } from "../dto/scanSummary";
 import { ThresholdError } from "../dto/thresholdError";
 
 export class ScanSummaryEvaluator {
-    constructor(private readonly config: ScanConfig,
+    constructor(private readonly config: SastConfig,
         private readonly log: Logger,
         private readonly isPolicyEnforcementSupported: boolean) {
     }

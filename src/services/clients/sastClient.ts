@@ -1,5 +1,5 @@
 import { ScanRequest } from "../../dto/api/scanRequest";
-import { ScanConfig } from "../..";
+import { SastConfig } from "../../dto/sastConfig";
 import { HttpClient } from "./httpClient";
 import { ScanStatus } from "../../dto/api/scanStatus";
 import { ScanStage } from "../../dto/api/scanStage";
@@ -18,7 +18,7 @@ export class SastClient {
 
     private scanId: number = 0;
 
-    constructor(private readonly config: ScanConfig,
+    constructor(private readonly config: SastConfig,
         private readonly httpClient: HttpClient,
         private readonly log: Logger) {
     }

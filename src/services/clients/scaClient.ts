@@ -17,13 +17,14 @@ import Zipper from "../zipper";
 import { TaskSkippedError } from "../../dto/taskSkippedError";
 import { RemoteRepositoryInfo } from '../../dto/sca/remoteRepositoryInfo';
 import { ScaReportResults } from '../../dto/sca/scaReportResults';
+import * as url from "url";
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
  */
 export class ScaClient {
     public static readonly TENANT_HEADER_NAME: string = "Account-Name";
-    public static readonly AUTHENTICATION: string = "/identity/connect/token";
+    public static readonly AUTHENTICATION: string = "identity/connect/token";
 
     private static readonly RISK_MANAGEMENT_API: string = "/risk-management/";
     private static readonly PROJECTS: string = ScaClient.RISK_MANAGEMENT_API + "projects";
@@ -51,11 +52,14 @@ export class ScaClient {
     private resolveScaLoginSettings(scaConfig: ScaConfig): ScaLoginSettings {
         const settings: ScaLoginSettings = new ScaLoginSettings();
 
-        const acUrl: string = scaConfig.accessControlUrl;
+        let acUrl: string = scaConfig.accessControlUrl;
         let isAccessControlInCloud: boolean = false;
 
         if (acUrl && acUrl.startsWith(ScaClient.CLOUD_ACCESS_CONTROL_BASE_URL)) {
             isAccessControlInCloud = true;
+        }
+        else {
+            acUrl = url.resolve(acUrl, 'CxRestAPI/auth/');
         }
         this.log.info(isAccessControlInCloud ? "Using cloud authentication." : "Using on-premise authentication.");
 
