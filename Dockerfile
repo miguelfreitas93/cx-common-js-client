@@ -8,7 +8,9 @@ COPY src ./src
 COPY tests ./tests
 COPY README.md ./README.md
 
-RUN npm install && \
+RUN export VERSION=$(node -p "require('./package.json').version") && \
+    echo $VERSION && \
+    npm install && \
     npm run build && \
     npm run test && \
     rm -rf src && \
