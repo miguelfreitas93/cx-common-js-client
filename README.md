@@ -2,7 +2,7 @@
 Client library that allows JavaScript and TypeScript applications to interact with Checkmarx products.
 
 ## Release Notes
-Please read latest features and fixes from the Release.txt file
+Please read latest features and fixes from the [Releases](https://github.com/checkmarx-ltd/cx-common-js-client/releases/latest).
 
 ## Build
 npm install
