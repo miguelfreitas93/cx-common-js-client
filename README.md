@@ -8,4 +8,4 @@ Please read latest features and fixes from the Release.txt file
 npm install
 
 ## Contributing
-Please read through our [contributing guidelines](.github/CONTRIBUTING.md).
+Please read through our [contributing guidelines](CONTRIBUTING.md).
