@@ -9,4 +9,5 @@ export class ScanSummary {
     thresholdErrors: ThresholdError[] = [];
 
     hasErrors = () => !!(this.policyCheck.violatedPolicyNames.length || this.thresholdErrors.length);
+    hasThresholdErrors = () => !!(this.thresholdErrors.length);
 }

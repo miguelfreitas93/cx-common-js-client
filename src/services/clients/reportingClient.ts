@@ -55,7 +55,7 @@ export class ReportingClient {
         }
 
         if (lastStatus === ReportStatus.Created) {
-            this.log.info(`${ReportingClient.REPORT_TYPE} report was created successfully.`);
+            this.log.info(`${ReportingClient.REPORT_TYPE} report was created successfully on server.`);
         } else {
             throw Error(`${ReportingClient.REPORT_TYPE} report cannot be generated. Status [${lastStatus}].`);
         }

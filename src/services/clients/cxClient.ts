@@ -9,7 +9,7 @@ import { ArmClient } from "./armClient";
 import { UpdateScanSettingsRequest } from "../../dto/api/updateScanSettingsRequest";
 import { Logger } from "../logger";
 import { ReportingClient } from "./reportingClient";
-import { ScanSummaryEvaluator } from "../scanSummaryEvaluator";
+import { SastSummaryEvaluator } from "../sastSummaryEvaluator";
 import { FilePathFilter } from "../filePathFilter";
 import { TeamApiClient } from "./teamApiClient";
 import { ScanSummary } from "../../dto/scanSummary";
@@ -17,6 +17,7 @@ import { ThresholdError } from "../../dto/thresholdError";
 import { tmpNameSync } from "tmp";
 import { ScaClient } from "./scaClient";
 import { SastConfig } from '../../dto/sastConfig';
+import { ScaConfig } from '../../dto/sca/scaConfig';
 
 /**
  * High-level CX API client that uses specialized clients internally.
@@ -34,6 +35,7 @@ export class CxClient {
 
     private config: ScanConfig | any;
     private sastConfig: SastConfig | any;
+    private scaConfig: ScaConfig | any;
 
     constructor(private readonly log: Logger) {
     }
@@ -41,6 +43,7 @@ export class CxClient {
     async scan(config: ScanConfig): Promise<ScanResults> {
         this.config = config;
         this.sastConfig = config.sastConfig;
+        this.scaConfig = config.scaConfig;
         let result: ScanResults = new ScanResults();
 
         if (config.enableSastScan) {
@@ -59,6 +62,10 @@ export class CxClient {
         }
 
         if (config.enableDependencyScan) {
+            if (config.enableSastScan) {
+                this.log.info("************************************************************");
+            }
+
             this.log.info("Initializing CxSCA client");
             await this.initScaClient();
             await this.scaClient.createScan();
@@ -82,9 +89,9 @@ export class CxClient {
     }
 
     private async initScaClient() {
-        const scaHttpClient: HttpClient = new HttpClient(this.config.scaConfig.apiUrl, this.config.cxOrigin, this.log);
-        this.scaClient = new ScaClient(this.config.scaConfig, this.config.sourceLocation, scaHttpClient, this.log);
-        await this.scaClient.scaLogin(this.config.scaConfig);
+        const scaHttpClient: HttpClient = new HttpClient(this.scaConfig.apiUrl, this.config.cxOrigin, this.log);
+        this.scaClient = new ScaClient(this.scaConfig, this.config.sourceLocation, scaHttpClient, this.log);
+        await this.scaClient.scaLogin(this.scaConfig);
         await this.scaClient.resolveProject(this.config.projectName);
     }
 
@@ -114,7 +121,7 @@ export class CxClient {
 
         await this.addDetailedReportToScanResults(result);
 
-        const evaluator = new ScanSummaryEvaluator(this.sastConfig, this.log, this.isPolicyEnforcementSupported);
+        const evaluator = new SastSummaryEvaluator(this.sastConfig, this.isPolicyEnforcementSupported);
         const summary = evaluator.getScanSummary(result);
 
         this.logPolicyCheckSummary(summary.policyCheck);
@@ -148,7 +155,7 @@ export class CxClient {
 
     private async uploadSourceCode(): Promise<void> {
         const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
-        this.log.info(`Zipping source code at ${this.config.sourceLocation} into file ${tempFilename}`);
+        this.log.debug(`Zipping source code at ${this.config.sourceLocation} into file ${tempFilename}`);
         let filter: FilePathFilter;
         filter = new FilePathFilter(this.sastConfig.fileExtension, this.sastConfig.folderExclusion);
         const zipper = new Zipper(this.log, filter);

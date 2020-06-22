@@ -12,4 +12,8 @@ export interface ScaConfig {
     remoteRepositoryInfo?: RemoteRepositoryInfo;
     dependencyFileExtension: string;
     dependencyFolderExclusion: string;
+    vulnerabilityThreshold: boolean;
+    highThreshold?: number;
+    mediumThreshold?: number;
+    lowThreshold?: number;
 }

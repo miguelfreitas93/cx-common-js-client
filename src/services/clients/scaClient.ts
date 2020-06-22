@@ -18,6 +18,8 @@ import { TaskSkippedError } from "../../dto/taskSkippedError";
 import { RemoteRepositoryInfo } from '../../dto/sca/remoteRepositoryInfo';
 import { ScaReportResults } from '../../dto/sca/scaReportResults';
 import * as url from "url";
+import { ScaSummaryEvaluator } from "../scaSummaryEvaluator";
+import { ScanSummary } from "../../dto/scanSummary";
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
@@ -158,7 +160,7 @@ export class ScaClient {
     private async submitSourceFromLocalDir(): Promise<any> {
         this.log.info("Using local directory flow.");
         const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
-        this.log.info(`Zipping source code at ${this.sourceLocation} into file ${tempFilename}`);
+        this.log.debug(`Zipping source code at ${this.sourceLocation} into file ${tempFilename}`);
         const filter: FilePathFilter = new FilePathFilter(this.config.dependencyFileExtension, this.config.dependencyFolderExclusion);
         const zipper = new Zipper(this.log, filter);
         const zipResult = await zipper.zipDirectory(this.sourceLocation, tempFilename);
@@ -171,11 +173,11 @@ export class ScaClient {
         return await this.sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }
 
-    private async uploadToAWS(url: string, file: string) {
-        this.log.debug(`Sending PUT request to ${url}`);
+    private async uploadToAWS(uploadUrl: string, file: string) {
+        this.log.debug(`Sending PUT request to ${uploadUrl}`);
         const child_process = require('child_process');
-        const command = `curl -X PUT -L "${url}" -H "Content-Type:" -T "${file}"`;
-        child_process.execSync(command);
+        const command = `curl -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
+        child_process.execSync(command, { stdio: 'pipe' });
     }
 
     private async sendStartScanRequest(sourceLocation: SourceLocationType, sourceUrl: string): Promise<any> {
@@ -199,12 +201,38 @@ export class ScaClient {
         throw Error('Unable to get scan ID.');
     }
 
+    private logBuildFailure(failure: ScanSummary) {
+        this.log.error(
+            `********************************************
+The Build Failed for the Following Reasons:
+********************************************`);
+        if (failure.thresholdErrors.length) {
+            this.log.error('Exceeded CxSCA Vulnerability Threshold.');
+            for (const error of failure.thresholdErrors) {
+                this.log.error(`SCA ${error.severity} severity results are above threshold. Results: ${error.actualViolationCount}. Threshold: ${error.threshold}`);
+            }
+        }
+    }
+
     public async waitForScanResults(result: ScanResults) {
         this.log.info("------------------------------------ Get CxSCA Results -----------------------------------");
         const waiter: SCAWaiter = new SCAWaiter(this.scanId, this.httpClient, this.stopwatch, this.log);
         await waiter.waitForScanToFinish();
         const scaResults: SCAResults = await this.retrieveScanResults();
         const scaReportResults: ScaReportResults = new ScaReportResults(scaResults);
+
+        const vulResults = {
+            highResults: scaReportResults.highVulnerability,
+            mediumResults: scaReportResults.mediumVulnerability,
+            lowResults: scaReportResults.lowVulnerability
+        };
+        const evaluator = new ScaSummaryEvaluator(this.config);
+        const summary = evaluator.getScanSummary(vulResults);
+        if (summary.hasThresholdErrors()) {
+            result.buildFailed = true;
+            this.logBuildFailure(summary);
+        }
+
         result.scaResults = scaReportResults;
     }
 
