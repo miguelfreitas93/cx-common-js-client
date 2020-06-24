@@ -45,16 +45,16 @@ export class CxClient {
         this.sastConfig = config.sastConfig;
         this.scaConfig = config.scaConfig;
         let result: ScanResults = new ScanResults();
+        result.syncMode = this.config.isSyncMode;
 
         if (config.enableSastScan) {
-            //TODO: Add functionality to test sast and add the sca result to the scan result and figure out the output on the client side
             result.updateSastDefaultResults(this.sastConfig);
             this.log.info('Initializing Cx client');
             await this.initClients();
             await this.initDynamicFields();
             result = await this.createSASTScan(result);
 
-            if (this.sastConfig.isSyncMode) {
+            if (this.config.isSyncMode) {
                 result = await this.getSASTResults(result);
             } else {
                 this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
@@ -69,7 +69,13 @@ export class CxClient {
             this.log.info("Initializing CxSCA client");
             await this.initScaClient();
             await this.scaClient.createScan();
-            await this.scaClient.waitForScanResults(result);
+
+            if (this.config.isSyncMode) {
+                await this.scaClient.waitForScanResults(result);
+            } else {
+                this.scaClient.getLatestScanResultsLink();
+                this.log.info('Running in Asynchronous mode. Not waiting for scan to finish.');
+            }
         }
 
         return result;

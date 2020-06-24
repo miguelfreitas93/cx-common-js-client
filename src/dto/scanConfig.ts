@@ -5,6 +5,7 @@ export interface ScanConfig {
     sourceLocation: string;
     projectName: string;
     projectId?: number;
+    isSyncMode: boolean;
     enableSastScan: boolean;
     enableDependencyScan: boolean;
     cxOrigin: string;

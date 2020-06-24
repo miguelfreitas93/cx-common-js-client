@@ -11,7 +11,6 @@ export interface SastConfig {
     isIncremental: boolean;
     forceScan: boolean;
     comment: string;
-    isSyncMode: boolean;
     presetName: string;
     presetId?: number;
     scanTimeoutInMinutes?: number;

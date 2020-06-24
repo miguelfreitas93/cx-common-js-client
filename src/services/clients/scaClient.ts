@@ -317,4 +317,27 @@ The Build Failed for the Following Reasons:
         this.log.info("Report ID is: " + reportId);
         return reportId;
     }
+
+    public getLatestScanResultsLink() {
+        const webAppUrl: string = this.config.webAppUrl;
+        if (!webAppUrl || webAppUrl === '') {
+            this.log.warning("Unable to get last scan results link. Web app URL is not specified.");
+        } else {
+            const lastScanResultsLink: string = `${webAppUrl}/#/projects/${this.projectId}/overview`;
+            this.log.info("CxSCA last scan results location: " + lastScanResultsLink);
+        }
+    }
+
+    public async getLatestScanResults(result: ScanResults) {
+        const lastScanSummary: ScaSummaryResults[] = await this.httpClient.getRequest(`/risk-management/riskReports?projectId=${this.projectId}&size=1`);
+        if (lastScanSummary && lastScanSummary.length === 1) {
+            const scaResults: SCAResults = new SCAResults();
+            this.printSummaryResult(lastScanSummary[0]);
+            scaResults.summary = lastScanSummary[0];
+            scaResults.scaResultReady = true;
+            scaResults.webReportLink = `${this.config.webAppUrl}/#/projects/${this.projectId}/overview`;
+            const scaReportResults: ScaReportResults = new ScaReportResults(scaResults);
+            result.scaResults = scaReportResults;
+        }
+    }
 }

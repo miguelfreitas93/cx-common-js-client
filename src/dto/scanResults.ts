@@ -77,7 +77,6 @@ export class ScanResults {
 
     public updateSastDefaultResults(sastConfig: SastConfig) {
         this.url = sastConfig.serverUrl;
-        this.syncMode = sastConfig.isSyncMode;
         this.enablePolicyViolations = sastConfig.enablePolicyViolations;
         this.thresholdEnabled = sastConfig.vulnerabilityThreshold;
         this.highThreshold = sastConfig.highThreshold;

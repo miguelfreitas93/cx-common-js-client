@@ -1,17 +1,17 @@
-import { ScanSummaryEvaluator } from "../src/services/scanSummaryEvaluator";
+import { SastSummaryEvaluator } from "../src/services/sastSummaryEvaluator";
 import { ScanResults } from "../src";
-import { ScanConfig } from "../src";
-import { Logger } from "../src";
+import { SastConfig } from "../src";
 import * as assert from "assert";
 
 describe("ScanSummaryEvaluator", function () {
     it('should return violated policy names in summary', function () {
-        const config = getScanConfig();
+        const config = getSastConfig();
         config.enablePolicyViolations = true;
 
-        const target = new ScanSummaryEvaluator(config, getDummyLogger(), true);
+        const target = new SastSummaryEvaluator(config, true);
 
-        const scanResults = new ScanResults(config);
+        const scanResults = new ScanResults();
+        scanResults.updateSastDefaultResults(config);
         scanResults.sastPolicies = ['policy1', 'policy2'];
         const summary = target.getScanSummary(scanResults);
 
@@ -23,15 +23,16 @@ describe("ScanSummaryEvaluator", function () {
     });
 
     it('should return threshold errors in summary', function () {
-        const config = getScanConfig();
+        const config = getSastConfig();
         config.highThreshold = 1;
         config.mediumThreshold = 5;
         config.lowThreshold = 10;
         config.vulnerabilityThreshold = true;
 
-        const target = new ScanSummaryEvaluator(config, getDummyLogger(), false);
+        const target = new SastSummaryEvaluator(config, false);
 
-        const scanResults = new ScanResults(config);
+        const scanResults = new ScanResults();
+        scanResults.updateSastDefaultResults(config);
         scanResults.highResults = 3;
         scanResults.mediumResults = 8;
         scanResults.lowResults = 4;
@@ -42,15 +43,16 @@ describe("ScanSummaryEvaluator", function () {
     });
 
     it('should not return threshold errors if all values are below thresholds', function () {
-        const config = getScanConfig();
+        const config = getSastConfig();
         config.highThreshold = 10;
         config.mediumThreshold = 15;
         config.lowThreshold = 20;
         config.vulnerabilityThreshold = true;
 
-        const target = new ScanSummaryEvaluator(config, getDummyLogger(), false);
+        const target = new SastSummaryEvaluator(config, false);
 
-        const scanResults = new ScanResults(config);
+        const scanResults = new ScanResults();
+        scanResults.updateSastDefaultResults(config);
         scanResults.highResults = 2;
         scanResults.mediumResults = 11;
         scanResults.lowResults = 18;
@@ -61,17 +63,12 @@ describe("ScanSummaryEvaluator", function () {
     });
 });
 
-function getScanConfig(): ScanConfig {
+function getSastConfig(): SastConfig {
     return {
-        cxOrigin: "JsCommon",
-        enableDependencyScan: true,
-        enableSastScan: false,
         highThreshold: 0,
         lowThreshold: 0,
         mediumThreshold: 0,
         presetId: 0,
-        projectId: 0,
-        scaConfig: undefined,
         scanTimeoutInMinutes: 0,
         teamId: 0,
         comment: "",
@@ -82,27 +79,11 @@ function getScanConfig(): ScanConfig {
         forceScan: false,
         isIncremental: false,
         isPublic: false,
-        isSyncMode: false,
         password: "",
         presetName: "",
-        projectName: "",
         serverUrl: "",
-        sourceLocation: "",
         teamName: "",
         username: "",
         vulnerabilityThreshold: false
-    };
-}
-
-function getDummyLogger(): Logger {
-    return {
-        debug() {
-        },
-        error() {
-        },
-        info() {
-        },
-        warning() {
-        }
     };
 }
