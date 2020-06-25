@@ -219,7 +219,7 @@ The Build Failed for the Following Reasons:
         const waiter: SCAWaiter = new SCAWaiter(this.scanId, this.httpClient, this.stopwatch, this.log);
         await waiter.waitForScanToFinish();
         const scaResults: SCAResults = await this.retrieveScanResults();
-        const scaReportResults: ScaReportResults = new ScaReportResults(scaResults);
+        const scaReportResults: ScaReportResults = new ScaReportResults(scaResults, this.config);
 
         const vulResults = {
             highResults: scaReportResults.highVulnerability,
@@ -336,7 +336,7 @@ The Build Failed for the Following Reasons:
             scaResults.summary = lastScanSummary[0];
             scaResults.scaResultReady = true;
             scaResults.webReportLink = `${this.config.webAppUrl}/#/projects/${this.projectId}/overview`;
-            const scaReportResults: ScaReportResults = new ScaReportResults(scaResults);
+            const scaReportResults: ScaReportResults = new ScaReportResults(scaResults, this.config);
             result.scaResults = scaReportResults;
         }
     }

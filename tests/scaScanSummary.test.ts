@@ -1,15 +1,15 @@
 import { ScaSummaryEvaluator } from "../src/services/scaSummaryEvaluator";
-import { HttpClient, ScaConfig, ScanResults } from "../src";
+import { ScaConfig, ScanResults } from "../src";
 import { ScanConfig } from "../src";
 import { SastConfig } from "../src";
 import { Logger } from "../src";
 import * as assert from "assert";
-import { ScaClient } from "../src/services/clients/scaClient";
 import { SourceLocationType } from '../src';
 import { RemoteRepositoryInfo } from '../src';
+import { CxClient } from '../src';
 
-describe("ScaScanSummary", function () {
-    it('should return threshold errors in summary', function () {
+describe("Sca Scan Summary", () => {
+    it('should return threshold errors in summary', () => {
         const config = getScaConfig();
         config.vulnerabilityThreshold = true;
         config.highThreshold = 1;
@@ -29,7 +29,7 @@ describe("ScaScanSummary", function () {
         assert.equal(summary.thresholdErrors.length, 2);
     });
 
-    it('should not return threshold errors if all values are below thresholds', function () {
+    it('should not return threshold errors if all values are below thresholds', () => {
         const config = getScaConfig();
         config.vulnerabilityThreshold = true;
         config.highThreshold = 10;
@@ -50,11 +50,42 @@ describe("ScaScanSummary", function () {
     });
 });
 
+describe("Sca Scan On Remote Source", () => {
+
+    const cxClient: CxClient = new CxClient(getDummyLogger());
+    const config: ScanConfig = getScanConfig();
+    config.projectName = 'ScaUnitTest';
+    const scaConfig = config.scaConfig;
+    if (scaConfig && scaConfig.remoteRepositoryInfo) {
+        scaConfig.remoteRepositoryInfo.url = 'https://github.com/margaritalm/SastAndOsaSource.git';
+    }
+
+    it('should return results when running on sync mode', async () => {
+        config.isSyncMode = true;
+        const scanResults: ScanResults = await cxClient.scan(config);
+        const scaResults = scanResults.scaResults;
+        assert.equal(scanResults.syncMode, true);
+        assert.ok(scaResults);
+        if (scaResults) {
+            assert.equal(scaResults.resultReady, true);
+            assert.notEqual(scaResults.highVulnerability, 0);
+            assert.notEqual(scaResults.mediumVulnerability, 0);
+            assert.notEqual(scaResults.lowVulnerability, 0);
+        }
+    });
+
+    it('should not return results when running on async mode', async () => {
+        config.isSyncMode = false;
+        const scanResults: ScanResults = await cxClient.scan(config);
+        assert.equal(scanResults.syncMode, false);
+        assert.ok(!scanResults.scaResults);
+    });
+});
+
 function getScanConfig(): ScanConfig {
     return {
         sourceLocation: "",
         projectName: "",
-        projectId: 0,
         enableSastScan: false,
         enableDependencyScan: true,
         cxOrigin: "JsCommon",
@@ -66,22 +97,25 @@ function getScanConfig(): ScanConfig {
 
 function getScaConfig(): ScaConfig {
     const remoteRepositoryInfo: RemoteRepositoryInfo = new RemoteRepositoryInfo();
-    remoteRepositoryInfo.url = 'https://github.com/checkmarx-ltd/Cx-Client-Common.git';
+    remoteRepositoryInfo.url = '';
+
     return {
+        //---------------------------------------------------------------------------//
+        // The following attributes are not populated because they are sensitive.
+        // To make relevant tests work, you need to populate them locally only.
+        // Please don't commit them to github.
         apiUrl: '',
         accessControlUrl: '',
         username: '',
         password: '',
         tenant: '',
         webAppUrl: '',
+        //---------------------------------------------------------------------------//
         sourceLocationType: SourceLocationType.REMOTE_REPOSITORY,
         remoteRepositoryInfo: remoteRepositoryInfo,
         dependencyFileExtension: '',
         dependencyFolderExclusion: '',
-        vulnerabilityThreshold: false,
-        highThreshold: 0,
-        mediumThreshold: 0,
-        lowThreshold: 0
+        vulnerabilityThreshold: false
     };
 }
 
@@ -112,13 +146,17 @@ function getSastConfig(): SastConfig {
 
 function getDummyLogger(): Logger {
     return {
-        debug() {
+        debug(message: string) {
+            console.debug(message);
         },
-        error() {
+        error(message: string) {
+            console.error(message);
         },
-        info() {
+        info(message: string) {
+            console.info(message);
         },
-        warning() {
+        warning(message: string) {
+            console.warn(message);
         }
     };
 }

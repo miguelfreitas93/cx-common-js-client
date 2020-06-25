@@ -80,10 +80,4 @@ export class ScaSummaryResults {
     public set totalOutdatedPackages(value: number) {
         this._totalOutdatedPackages = value;
     }
-
-    public get totalOkLibraries(): number {
-        let totalOk: number = this._totalPackages - (this._highVulnerabilityCount + this._mediumVulnerabilityCount + this._lowVulnerabilityCount);
-        totalOk = Math.max(totalOk, 0);
-        return totalOk;
-    }
 }

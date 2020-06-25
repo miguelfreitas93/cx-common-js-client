@@ -1,6 +1,6 @@
 {
   "name": "@checkmarx/cx-common-js-client",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "description": "Client for interaction with Checkmarx products.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "test": "mocha -r ts-node/register tests/**/*.test.ts"
+    "test": "mocha --timeout 0 -r ts-node/register tests/**/*.test.ts"
   },
   "repository": {
     "type": "git",

@@ -2,6 +2,9 @@ import { CveReportTableRow } from './report/cveReportTableRow';
 import { Finding } from './report/finding';
 import { Severity } from './report/severity';
 import { SCAResults } from './scaResults';
+import { Package } from './report/package';
+import { ScaSummaryResults } from './report/scaSummaryResults';
+import { ScaConfig } from './scaConfig';
 
 export class ScaReportResults {
     private _resultReady: boolean = false;
@@ -17,24 +20,57 @@ export class ScaReportResults {
     private _dependencyMediumCVEReportTable: CveReportTableRow[] = [];
     private _dependencyLowCVEReportTable: CveReportTableRow[] = [];
     private _totalLibraries: number = 0;
+    private _packages: Package[] = [];
+    private _summary: ScaSummaryResults | any;
+    private _vulnerabilityThreshold: boolean = false;
+    private _highThreshold?: number;
+    private _mediumThreshold?: number;
+    private _lowThreshold?: number;
 
-    constructor(scaResults: SCAResults) {
+    constructor(scaResults: SCAResults, scaConfig: ScaConfig) {
+        if (scaConfig) {
+            this._vulnerabilityThreshold = scaConfig.vulnerabilityThreshold;
+            this._highThreshold = scaConfig.highThreshold;
+            this._mediumThreshold = scaConfig.mediumThreshold;
+            this._lowThreshold = scaConfig.lowThreshold;
+        }
+
         if (scaResults) {
+            this._resultReady = scaResults.scaResultReady;
+            this._summaryLink = scaResults.webReportLink;
+            this._packages = scaResults.packages;
+            this._summary = scaResults.summary;
+
             if (scaResults.summary) {
                 this._highVulnerability = scaResults.summary.highVulnerabilityCount;
                 this._mediumVulnerability = scaResults.summary.mediumVulnerabilityCount;
                 this._lowVulnerability = scaResults.summary.lowVulnerabilityCount;
-                this._vulnerableAndOutdated = scaResults.summary.totalOutdatedPackages;
-                this._nonVulnerableLibraries = scaResults.summary.totalOkLibraries;
                 const dateFormat = require('dateformat');
                 this._scanStartTime = dateFormat(scaResults.summary.createdOn, "default");
                 this._scanEndTime = "";
                 this._totalLibraries = scaResults.summary.totalPackages;
             }
-            this._resultReady = scaResults.scaResultReady;
-            this._summaryLink = scaResults.webReportLink;
+
+            this.calculateVulnerableAndOutdatedPackages();
             this.setDependencyCVEReportTable(scaResults.findings);
         }
+    }
+
+    private calculateVulnerableAndOutdatedPackages() {
+        let sum: number;
+        (this._packages || []).forEach(pckg => {
+            if (pckg) {
+                sum = pckg.highVulnerabilityCount +
+                    pckg.mediumVulnerabilityCount +
+                    pckg.lowVulnerabilityCount;
+                if (sum === 0) {
+                    this._nonVulnerableLibraries++;
+                }
+                else if (sum > 0 && pckg.outdated) {
+                    this._vulnerableAndOutdated++;
+                }
+            }
+        });
     }
 
     private setDependencyCVEReportTable(findings: Finding[]) {
@@ -157,5 +193,53 @@ export class ScaReportResults {
 
     public set dependencyLowCVEReportTable(value: CveReportTableRow[]) {
         this._dependencyLowCVEReportTable = value;
+    }
+
+    public get packages(): Package[] {
+        return this._packages;
+    }
+
+    public set packages(value: Package[]) {
+        this._packages = value;
+    }
+
+    public get summary(): ScaSummaryResults | any {
+        return this._summary;
+    }
+
+    public set summary(value: ScaSummaryResults | any) {
+        this._summary = value;
+    }
+
+    public get vulnerabilityThreshold(): boolean {
+        return this._vulnerabilityThreshold;
+    }
+
+    public set vulnerabilityThreshold(value: boolean) {
+        this._vulnerabilityThreshold = value;
+    }
+
+    public get highThreshold(): number | undefined {
+        return this._highThreshold;
+    }
+
+    public set highThreshold(value: number | undefined) {
+        this._highThreshold = value;
+    }
+
+    public get mediumThreshold(): number | undefined {
+        return this._mediumThreshold;
+    }
+
+    public set mediumThreshold(value: number | undefined) {
+        this._mediumThreshold = value;
+    }
+
+    public get lowThreshold(): number | undefined {
+        return this._lowThreshold;
+    }
+
+    public set lowThreshold(value: number | undefined) {
+        this._lowThreshold = value;
     }
 }
