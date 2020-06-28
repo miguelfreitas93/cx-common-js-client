@@ -1,13 +1,17 @@
-export {CxClient} from './services/clients/cxClient';
-export {ScanConfig} from './dto/scanConfig';
-export {ScaConfig} from './dto/scaConfig';
-export {PollingSettings} from './dto/pollingSettings';
-export {ScanResults} from './dto/scanResults';
-export {TaskSkippedError} from './dto/taskSkippedError';
-export {Logger} from './services/logger';
-export {TeamApiClient} from './services/clients/teamApiClient';
-export {HttpClient} from './services/clients/httpClient'
-export {Waiter} from './services/waiter'
-export {ScanStatus} from './dto/api/scanStatus'
-export {ScanStage} from './dto/api/scanStage'
-export {ReportingClient} from './services/clients/reportingClient'
+export { CxClient } from './services/clients/cxClient';
+export { ScanConfig } from './dto/scanConfig';
+export { ScaConfig } from './dto/sca/scaConfig';
+export { PollingSettings } from './dto/pollingSettings';
+export { ScanResults } from './dto/scanResults';
+export { TaskSkippedError } from './dto/taskSkippedError';
+export { Logger } from './services/logger';
+export { TeamApiClient } from './services/clients/teamApiClient';
+export { HttpClient } from './services/clients/httpClient';
+export { Waiter } from './services/waiter';
+export { ScanStatus } from './dto/api/scanStatus';
+export { ScanStage } from './dto/api/scanStage';
+export { ReportingClient } from './services/clients/reportingClient';
+export { SourceLocationType } from './dto/sca/sourceLocationType';
+export { RemoteRepositoryInfo } from './dto/sca/remoteRepositoryInfo';
+export { ScaReportResults } from './dto/sca/scaReportResults';
+export { SastConfig } from './dto/sastConfig';

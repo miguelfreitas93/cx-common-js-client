@@ -1,6 +1,6 @@
 {
   "name": "@checkmarx/cx-common-js-client",
-  "version": "0.1.15",
+  "version": "0.1.21",
   "description": "Client for interaction with Checkmarx products.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "test": "mocha -r ts-node/register ./tests/*.test.ts"
+    "test": "mocha --timeout 20000 -r ts-node/register tests/**/*.test.ts"
   },
   "repository": {
     "type": "git",
@@ -34,6 +34,7 @@
   "homepage": "https://github.com/checkmarx-ltd/cx-common-js-client#readme",
   "dependencies": {
     "archiver": "^4.0.1",
+    "dateformat": "^3.0.3",
     "micromatch": "^4.0.2",
     "mkdirp": "^1.0.4",
     "parse-ms": "^2.1.0",

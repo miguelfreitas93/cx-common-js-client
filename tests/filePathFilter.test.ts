@@ -1,5 +1,4 @@
-import {FilePathFilter} from "../src/services/filePathFilter";
-import {FilterTestCases, Utils} from "./utils";
+import { FilterTestCases, Utils } from "./utils";
 
 describe('FilePathFilter', function () {
 

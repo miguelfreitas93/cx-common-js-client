@@ -1,4 +1,4 @@
-import {FilePathFilter} from "../src/services/filePathFilter";
+import { FilePathFilter } from "../src/services/filePathFilter";
 import * as assert from "assert";
 
 export type FilterTestCases = [string, boolean][];

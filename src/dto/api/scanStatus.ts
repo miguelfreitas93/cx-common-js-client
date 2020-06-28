@@ -1,4 +1,4 @@
-import {ScanStage} from "./scanStage";
+import { ScanStage } from "./scanStage";
 
 export interface ScanStatus {
     stage: {

@@ -1,63 +1,34 @@
-import {Logger} from "./logger";
-import {ScanResults} from "..";
-import {ScanConfig} from "..";
-import {ScanSummary} from "../dto/scanSummary";
-import {ThresholdError} from "../dto/thresholdError";
+import { ThresholdError } from "../dto/thresholdError";
+import { ScanSummary } from "../dto/scanSummary";
 
-export class ScanSummaryEvaluator {
-    constructor(private readonly config: ScanConfig,
-                private readonly log: Logger,
-                private readonly isPolicyEnforcementSupported: boolean) {
-    }
-
+export abstract class ScanSummaryEvaluator {
     /**
      * Generates scan summary with error info, if any.
      */
-    getScanSummary(scanResult: ScanResults): ScanSummary {
-        const result = new ScanSummary();
-        result.policyCheck = this.getPolicyCheckSummary(scanResult);
-        result.thresholdErrors = this.getThresholdErrors(scanResult);
-        return result;
-    }
+    protected abstract getScanSummary(scanResult: any): ScanSummary;
 
-    private getPolicyCheckSummary(scanResult: ScanResults) {
-        let result;
-        if (this.config.enablePolicyViolations && this.isPolicyEnforcementSupported) {
-            result = {
-                wasPerformed: true,
-                violatedPolicyNames: scanResult.sastPolicies
-            };
-        } else {
-            result = {
-                wasPerformed: false,
-                violatedPolicyNames: []
-            };
-        }
-        return result;
-    }
-
-    private getThresholdErrors(scanResult: ScanResults) {
+    protected static getThresholdErrors(vulnerabilityThreshold: boolean, scanResult: any, config: any) {
         let result: ThresholdError[];
-        if (this.config.vulnerabilityThreshold) {
-            result = this.getSastThresholdErrors(scanResult);
+        if (vulnerabilityThreshold) {
+            result = ScanSummaryEvaluator.getSastThresholdErrors(scanResult, config);
         } else {
             result = [];
         }
         return result;
     }
 
-    private getSastThresholdErrors(scanResult: ScanResults) {
+    private static getSastThresholdErrors(scanResult: any, config: any) {
         const result: ThresholdError[] = [];
-        ScanSummaryEvaluator.addThresholdErrors(scanResult.highResults, this.config.highThreshold, 'high', result);
-        ScanSummaryEvaluator.addThresholdErrors(scanResult.mediumResults, this.config.mediumThreshold, 'medium', result);
-        ScanSummaryEvaluator.addThresholdErrors(scanResult.lowResults, this.config.lowThreshold, 'low', result);
+        ScanSummaryEvaluator.addThresholdErrors(scanResult.highResults, config.highThreshold, 'high', result);
+        ScanSummaryEvaluator.addThresholdErrors(scanResult.mediumResults, config.mediumThreshold, 'medium', result);
+        ScanSummaryEvaluator.addThresholdErrors(scanResult.lowResults, config.lowThreshold, 'low', result);
         return result;
     }
 
     private static addThresholdErrors(amountToCheck: number,
-                                      threshold: number | undefined,
-                                      severity: string,
-                                      target: ThresholdError[]) {
+        threshold: number | undefined,
+        severity: string,
+        target: ThresholdError[]) {
         if (typeof threshold !== 'undefined') {
             if (threshold < 0) {
                 throw Error('Threshold must be 0 or greater');

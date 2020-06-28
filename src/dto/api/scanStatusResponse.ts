@@ -1,6 +1,6 @@
-import {StatusName} from "./statusName";
+import { StatusName } from "./statusName";
 
 export interface ScanStatusResponse {
-    name:StatusName;
-    message:string;
+    name: StatusName;
+    message: string;
 }

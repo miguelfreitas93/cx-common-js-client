@@ -3,5 +3,5 @@ export interface UpdateScanSettingsRequest {
     presetId: number,
     engineConfigurationId: number,
     postScanActionId?: number,
-    emailNotifications?: object,
+    emailNotifications?: object
 }

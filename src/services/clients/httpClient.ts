@@ -1,7 +1,8 @@
 import * as url from 'url';
 import * as request from 'superagent';
-import {Logger} from "../logger";
-import {ScaLoginSettings} from "../../dto/scaLoginSettings";
+import { Logger } from "../logger";
+import { ScaLoginSettings } from "../../dto/sca/scaLoginSettings";
+import { ScaClient } from './scaClient';
 
 interface InternalRequestOptions extends RequestOptions {
     method: 'put' | 'post' | 'get';
@@ -29,6 +30,7 @@ export class HttpClient {
 
     private username = '';
     private password = '';
+    private scaSettings: ScaLoginSettings | any;
 
     constructor(private readonly baseUrl: string, private readonly origin: string, private readonly log: Logger) {
     }
@@ -48,16 +50,16 @@ export class HttpClient {
     }
 
     getRequest(relativePath: string, options?: RequestOptions): Promise<any> {
-        const internalOptions: InternalRequestOptions = {retry: true, method: 'get'};
+        const internalOptions: InternalRequestOptions = { retry: true, method: 'get' };
         return this.sendRequest(relativePath, Object.assign(internalOptions, options));
     }
 
     postRequest(relativePath: string, data: object): Promise<any> {
-        return this.sendRequest(relativePath, {singlePostData: data, retry: true, method: 'post'});
+        return this.sendRequest(relativePath, { singlePostData: data, retry: true, method: 'post' });
     }
 
     putRequest(relativePath: string, data: object): Promise<any> {
-        return this.sendRequest(relativePath, {singlePostData: data, retry: true, method: 'put'});
+        return this.sendRequest(relativePath, { singlePostData: data, retry: true, method: 'put' });
     }
 
     postMultipartRequest(relativePath: string,
@@ -80,9 +82,15 @@ export class HttpClient {
         this.log.debug(`Sending ${options.method.toUpperCase()} request to ${fullUrl}`);
 
         let result = request[options.method](fullUrl)
-            .auth(this.accessToken, {type: 'bearer'})
+            .auth(this.accessToken, { type: 'bearer' })
             .accept('json')
             .set('cxOrigin', this.origin);
+
+        if (this.scaSettings && this.scaSettings.apiUrl === this.baseUrl) {
+            // Pass tenant name in a custom header. This will allow to get token from on-premise access control server
+            // and then use this token for SCA authentication in cloud.
+            result.set(ScaClient.TENANT_HEADER_NAME, this.scaSettings.tenant)
+        }
 
         result = HttpClient.includePostData(result, options);
 
@@ -96,7 +104,13 @@ export class HttpClient {
         const canRetry = options.retry && err && err.response && err.response.unauthorized;
         if (canRetry) {
             this.log.warning('Access token expired, requesting a new token');
-            await this.loginWithStoredCredentials();
+
+            if (this.scaSettings && this.scaSettings.apiUrl === this.baseUrl) {
+                await this.scaLogin(this.scaSettings);
+            }
+            else {
+                await this.loginWithStoredCredentials();
+            }
 
             const optionsClone = Object.assign({}, options);
             // Avoid infinite recursion.
@@ -114,7 +128,7 @@ export class HttpClient {
         if (options.singlePostData) {
             result = result.send(options.singlePostData);
         } else if (options.multipartPostData) {
-            const {fields, attachments} = options.multipartPostData;
+            const { fields, attachments } = options.multipartPostData;
             result = result.field(fields);
             for (const prop in attachments) {
                 result = result.attach(prop, attachments[prop]);
@@ -150,34 +164,35 @@ export class HttpClient {
             );
     }
 
-    async scaLogin(scaLoginSettings:ScaLoginSettings,authPath:string){
+    async scaLogin(settings: ScaLoginSettings) {
+        this.scaSettings = settings;
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-        const fullUrl = url.resolve(scaLoginSettings.accessControlBaseUrl, authPath);
+        const fullUrl = url.resolve(settings.accessControlBaseUrl, ScaClient.AUTHENTICATION);
         return request
             .post(fullUrl)
             .type('form')
+            // Pass tenant name in a custom header. This will allow to get token from on-premise access control server
+            // and then use this token for SCA authentication in cloud.
+            .set(ScaClient.TENANT_HEADER_NAME, settings.tenant)
             .send({
-                userName: scaLoginSettings.username,
-                password: scaLoginSettings.password,
+                userName: settings.username,
+                password: settings.password,
                 grant_type: 'password',
-                scope: 'sca_api offline_access',
-                client_id: 'sca_resource_owner',
-                client_secret: '',
-                acr_values:'Tenant:'+scaLoginSettings.tenant
+                scope: settings.clientTypeForPasswordAuth.scopes,
+                client_id: settings.clientTypeForPasswordAuth.clientId,
+                client_secret: settings.clientTypeForPasswordAuth.clientSecret,
+                acr_values: 'Tenant:' + settings.tenant
             })
             .then(
                 (response: request.Response) => {
                     this.accessToken = response.body.access_token;
-                    //this.log.info( "this is the token " + this.accessToken);
                 },
                 (err: any) => {
                     const status = err && err.response ? (err.response as request.Response).status : 'n/a';
                     const message = err && err.message ? err.message : 'n/a';
                     this.log.error(`POST request failed to ${fullUrl}. HTTP status: ${status}, message: ${message}`);
-                    this.log.error(`url ${this.baseUrl} username ${scaLoginSettings.username} password ${scaLoginSettings.password} tenant ${scaLoginSettings.tenant} acs ${scaLoginSettings.accessControlBaseUrl}`);
                     throw Error('Login failed');
                 }
             );
     }
-
 }
