@@ -1,9 +1,0 @@
-version: '3'
-
-services:
-  cx-common-js-client:
-    image: cx-common-js-client:latest
-    container_name: cx-common-js-client
-    build:
-      context: ./
-      dockerfile: Dockerfile
