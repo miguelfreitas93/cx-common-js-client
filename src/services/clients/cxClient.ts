@@ -40,7 +40,7 @@ export class CxClient {
     constructor(private readonly log: Logger) {
     }
 
-    async scan(config: ScanConfig): Promise<ScanResults> {
+    async scan(config: ScanConfig, httpClient?: HttpClient): Promise<ScanResults> {
         this.config = config;
         this.sastConfig = config.sastConfig;
         this.scaConfig = config.scaConfig;
@@ -50,7 +50,7 @@ export class CxClient {
         if (config.enableSastScan) {
             result.updateSastDefaultResults(this.sastConfig);
             this.log.info('Initializing Cx client');
-            await this.initClients();
+            await this.initClients(httpClient);
             await this.initDynamicFields();
             result = await this.createSASTScan(result);
 
@@ -81,10 +81,16 @@ export class CxClient {
         return result;
     }
 
-    private async initClients() {
+    private async initClients(httpClient?: HttpClient) {
         const baseUrl = url.resolve(this.sastConfig.serverUrl, 'CxRestAPI/');
-        this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log);
-        await this.httpClient.login(this.sastConfig.username, this.sastConfig.password);
+
+        if (!httpClient) {
+            this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log);
+            await this.httpClient.login(this.sastConfig.username, this.sastConfig.password);
+        }
+        else {
+            this.httpClient = httpClient;
+        }
 
         this.sastClient = new SastClient(this.sastConfig, this.httpClient, this.log);
 

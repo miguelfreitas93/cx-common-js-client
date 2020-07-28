@@ -1,4 +1,5 @@
 import * as url from 'url';
+import * as path from "path";
 import * as request from 'superagent';
 import { Logger } from "../logger";
 import { ScaLoginSettings } from "../../dto/sca/scaLoginSettings";
@@ -27,10 +28,12 @@ interface RequestOptions {
  */
 export class HttpClient {
     accessToken: string = '';
+    cookies: Map<string, string> = new Map<string, string>();
 
     private username = '';
     private password = '';
     private scaSettings: ScaLoginSettings | any;
+    private isSsoLogin: boolean = false;
 
     constructor(private readonly baseUrl: string, private readonly origin: string, private readonly log: Logger) {
     }
@@ -47,6 +50,8 @@ export class HttpClient {
         this.accessToken = '';
         this.username = '';
         this.password = '';
+        this.cookies.clear();
+        this.isSsoLogin = false;
     }
 
     getRequest(relativePath: string, options?: RequestOptions): Promise<any> {
@@ -82,14 +87,23 @@ export class HttpClient {
         this.log.debug(`Sending ${options.method.toUpperCase()} request to ${fullUrl}`);
 
         let result = request[options.method](fullUrl)
-            .auth(this.accessToken, { type: 'bearer' })
             .accept('json')
             .set('cxOrigin', this.origin);
+
+        if (this.accessToken) {
+            result.auth(this.accessToken, { type: 'bearer' });
+        }
+
+        if (this.cookies && this.cookies.size > 0) {
+            this.cookies.forEach((value, key) => {
+                result.set(key, value);
+            });
+        }
 
         if (this.scaSettings && this.scaSettings.apiUrl === this.baseUrl) {
             // Pass tenant name in a custom header. This will allow to get token from on-premise access control server
             // and then use this token for SCA authentication in cloud.
-            result.set(ScaClient.TENANT_HEADER_NAME, this.scaSettings.tenant)
+            result.set(ScaClient.TENANT_HEADER_NAME, this.scaSettings.tenant);
         }
 
         result = HttpClient.includePostData(result, options);
@@ -108,8 +122,11 @@ export class HttpClient {
             if (this.scaSettings && this.scaSettings.apiUrl === this.baseUrl) {
                 await this.scaLogin(this.scaSettings);
             }
-            else {
+            else if (this.username && this.password) {
                 await this.loginWithStoredCredentials();
+            }
+            else if (this.isSsoLogin) {
+                this.ssoLogin();
             }
 
             const optionsClone = Object.assign({}, options);
@@ -194,5 +211,27 @@ export class HttpClient {
                     throw Error('Login failed');
                 }
             );
+    }
+
+    async ssoLogin() {
+        this.log.info('Logging into the Checkmarx service using SSO');
+        process.chdir(`${__dirname}/../../../node_modules/@checkmarx/cli`);
+        const child_process = require('child_process');
+        const script: string = path.sep === "/" ? 'runCxConsole.sh' : 'runCxConsole.cmd';
+        const sastUrl: string = this.baseUrl.replace('/CxRestAPI/', '');
+        const command = `${script} TestConnection -CxServer ${sastUrl} -usesso -v`;
+        const output: string = child_process.execSync(command).toString();
+        output.split(/\r?\n/).forEach((line) => {
+            if (line.includes('Access Token: ')) {
+                this.accessToken = line.split('Access Token: ')[1];
+            }
+            else if (line.includes('CXCSRFToken: ')) {
+                this.cookies.set('CXCSRFToken', line.split('CXCSRFToken: ')[1]);
+            }
+            else if (line.includes('cookie: ')) {
+                this.cookies.set('cookie', line.split('cookie: ')[1]);
+            }
+        });
+        this.isSsoLogin = true;
     }
 }
