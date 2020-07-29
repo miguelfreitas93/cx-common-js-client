@@ -1,6 +1,6 @@
 {
   "name": "@checkmarx/cx-common-js-client",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "description": "Client for interaction with Checkmarx products.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,8 +17,8 @@
     "url": "git+https://github.com/checkmarx-ltd/cx-common-js-client.git"
   },
   "author": {
-    "name": "Alexey Kononov",
-    "email": "alexey.kononov@checkmarx.com"
+    "name": "Ghannam Zerini",
+    "email": "ghannam.zerini@checkmarx.com"
   },
   "keywords": [
     "checkmarx",

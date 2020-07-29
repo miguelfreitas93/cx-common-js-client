@@ -215,7 +215,7 @@ export class HttpClient {
 
     async ssoLogin() {
         this.log.info('Logging into the Checkmarx service using SSO');
-        process.chdir(`${__dirname}/../../../node_modules/@checkmarx/cli`);
+        process.chdir(`${__dirname}/../../../../cli`);
         const child_process = require('child_process');
         const script: string = path.sep === "/" ? 'runCxConsole.sh' : 'runCxConsole.cmd';
         const sastUrl: string = this.baseUrl.replace('/CxRestAPI/', '');
