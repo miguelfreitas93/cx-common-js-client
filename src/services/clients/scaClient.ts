@@ -161,7 +161,7 @@ export class ScaClient {
         this.log.info("Using local directory flow.");
         const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
         this.log.debug(`Zipping source code at ${this.sourceLocation} into file ${tempFilename}`);
-        const filter: FilePathFilter = new FilePathFilter(this.config.dependencyFileExtension, this.config.dependencyFolderExclusion);
+        const filter: FilePathFilter = new FilePathFilter(this.config.dependencyFileExtension || await this.fetchDependencyFileExtension(), this.config.dependencyFolderExclusion);
         const zipper = new Zipper(this.log, filter);
         const zipResult = await zipper.zipDirectory(this.sourceLocation, tempFilename);
         if (zipResult.fileCount === 0) {
@@ -171,6 +171,12 @@ export class ScaClient {
         const uploadedArchiveUrl: string = await this.getSourceUploadUrl();
         await this.uploadToAWS(uploadedArchiveUrl, tempFilename);
         return await this.sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
+    }
+
+    private async fetchDependencyFileExtension(): Promise<any> {
+        this.log.info("Sending a request to fetch default DependencyFileExtension.");
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        return '**/pom.xml'
     }
 
     private async uploadToAWS(uploadUrl: string, file: string) {
