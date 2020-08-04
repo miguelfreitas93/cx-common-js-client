@@ -1,14 +1,14 @@
-import { ScaSummaryEvaluator } from "../src/services/scaSummaryEvaluator";
-import { ScaConfig, ScanResults } from "../src";
-import { ScanConfig } from "../src";
-import { SastConfig } from "../src";
-import { Logger } from "../src";
-import * as assert from "assert";
+import { ScaSummaryEvaluator } from '../src/services/scaSummaryEvaluator';
+import { ScaConfig, ScanResults } from '../src';
+import { ScanConfig } from '../src';
+import { SastConfig } from '../src';
+import { Logger } from '../src';
+import * as assert from 'assert';
 import { SourceLocationType } from '../src';
 import { RemoteRepositoryInfo } from '../src';
 import { CxClient } from '../src';
 
-describe("Sca Scan Summary", () => {
+describe('Sca Scan Summary', () => {
     it('should return threshold errors in summary', () => {
         const config = getScaConfig();
         config.vulnerabilityThreshold = true;
@@ -50,7 +50,7 @@ describe("Sca Scan Summary", () => {
     });
 });
 
-describe("Sca Scan On Remote Source", () => {
+describe('Sca Scan On Remote Source', () => {
 
     const cxClient: CxClient = new CxClient(getDummyLogger());
     const config: ScanConfig = getScanConfig();
@@ -82,13 +82,47 @@ describe("Sca Scan On Remote Source", () => {
     });
 });
 
+describe('Sca Scan On Local Source', () => {
+
+    const cxClient: CxClient = new CxClient(getDummyLogger());
+    const config: ScanConfig = getScanConfig();
+    config.projectName = 'ScaUnitTestLocal';
+    config.scaConfig!.sourceLocationType = SourceLocationType.LOCAL_DIRECTORY;
+    //---------------------------------------------------------------------------//
+    // Set the following attribute if you want to debug finger print file.
+    config.scaConfig!.fingerprintsFilePath = '';
+    //---------------------------------------------------------------------------//
+    config.sourceLocation = `${ __dirname }\\tests-resources\\Java-Vulnerable-Project`;
+
+    it('should return results when running on sync mode', async () => {
+        config.isSyncMode = true;
+        const scanResults: ScanResults = await cxClient.scan(config);
+        const scaResults = scanResults.scaResults;
+        assert.equal(scanResults.syncMode, true);
+        assert.ok(scaResults);
+        if (scaResults) {
+            assert.equal(scaResults.resultReady, true);
+            assert.notEqual(scaResults.highVulnerability, 0);
+            assert.notEqual(scaResults.mediumVulnerability, 0);
+            assert.equal(scaResults.lowVulnerability, 0);
+        }
+    });
+
+    it('should not return results when running on async mode', async () => {
+        config.isSyncMode = false;
+        const scanResults: ScanResults = await cxClient.scan(config);
+        assert.equal(scanResults.syncMode, false);
+        assert.ok(!scanResults.scaResults);
+    });
+});
+
 function getScanConfig(): ScanConfig {
     return {
-        sourceLocation: "",
-        projectName: "",
+        sourceLocation: '',
+        projectName: '',
         enableSastScan: false,
         enableDependencyScan: true,
-        cxOrigin: "JsCommon",
+        cxOrigin: 'JsCommon',
         sastConfig: getSastConfig(),
         scaConfig: getScaConfig(),
         isSyncMode: false
@@ -121,19 +155,19 @@ function getScaConfig(): ScaConfig {
 
 function getSastConfig(): SastConfig {
     return {
-        username: "",
-        password: "",
-        teamName: "",
+        username: '',
+        password: '',
+        teamName: '',
         teamId: 0,
-        serverUrl: "",
+        serverUrl: '',
         isPublic: false,
         denyProject: false,
-        folderExclusion: "",
-        fileExtension: "",
+        folderExclusion: '',
+        fileExtension: '',
         isIncremental: false,
         forceScan: false,
-        comment: "",
-        presetName: "",
+        comment: '',
+        presetName: '',
         presetId: 0,
         scanTimeoutInMinutes: 0,
         enablePolicyViolations: false,

@@ -10,6 +10,8 @@ export interface ScaConfig {
     webAppUrl: string;
     sourceLocationType: SourceLocationType;
     remoteRepositoryInfo?: RemoteRepositoryInfo;
+    fingerprintsFilePath?: string;
+    includeSource?: boolean
     dependencyFileExtension: string;
     dependencyFolderExclusion: string;
     vulnerabilityThreshold: boolean;
