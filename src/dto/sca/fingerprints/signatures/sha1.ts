@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import Signature from './signature';
 
-export default class Sha1Signature implements Signature {
+export default class Sha1 implements Signature {
     type: string = 'SHA1';
     value: string;
 

@@ -4,7 +4,7 @@ import * as upath from 'upath';
 import { Logger } from '../..';
 import ScanFingerprints from './fingerprints/scanFingerprints';
 import FileFingerprint from './fingerprints/fileFingerprint';
-import Sha1Signature from './fingerprints/signatures/sha1.signature';
+import Sha1Signature from './fingerprints/signatures/sha1';
 import { FilePathFilter } from '../../services/filePathFilter';
 
 export class ScaFingerprintCollector {

@@ -1,6 +1,6 @@
 import { Logger } from '../src';
 import * as assert from 'assert';
-import Sha1Signature from '../src/dto/sca/fingerprints/signatures/sha1.signature';
+import Sha1Signature from '../src/dto/sca/fingerprints/signatures/sha1';
 import * as fs from 'fs';
 
 describe('SHA1 signature', () => {
