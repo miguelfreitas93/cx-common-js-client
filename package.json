@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "test": "mocha --timeout 30000 -r ts-node/register tests/**/*.test.ts"
+    "test": "mocha --timeout 50000 -r ts-node/register tests/**/*.test.ts"
   },
   "repository": {
     "type": "git",

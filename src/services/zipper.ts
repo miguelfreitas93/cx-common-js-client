@@ -1,10 +1,10 @@
 import * as fs from 'fs';
-import * as path from 'path';
+import * as path from "path";
 import archiver, { Archiver, ArchiverError, ProgressData } from 'archiver';
-import { Logger } from './logger';
-import { walkSync } from 'walk';
-import { FilePathFilter } from './filePathFilter';
-import { ZipResult } from '../dto/zipResult';
+import { Logger } from "./logger";
+import { walkSync } from "walk";
+import { FilePathFilter } from "./filePathFilter";
+import { ZipResult } from "../dto/zipResult";
 import * as upath from 'upath';
 
 export default class Zipper {
@@ -15,7 +15,7 @@ export default class Zipper {
     private totalAddedFiles = 0;
 
     constructor(private readonly log: Logger,
-                private readonly filenameFilter: FilePathFilter) {
+        private readonly filenameFilter: FilePathFilter) {
     }
 
     zipDirectory(srcDirs: string[], targetPath: string): Promise<ZipResult> {
@@ -64,7 +64,7 @@ export default class Zipper {
         const result = archiver('zip', { zlib: { level: 9 } });
 
         result.on('warning', (err: ArchiverError) => {
-            this.log.warning(`Archiver: ${ err.message }`);
+            this.log.warning(`Archiver: ${err.message}`);
         });
 
         result.on('error', (err: ArchiverError) => {
@@ -84,7 +84,7 @@ export default class Zipper {
                 fileCount: this.totalAddedFiles
             };
 
-            this.log.info(`Acrhive creation completed. Total bytes written: ${ this.archiver.pointer() }, files: ${ this.totalAddedFiles }.`);
+            this.log.info(`Acrhive creation completed. Total bytes written: ${this.archiver.pointer()}, files: ${this.totalAddedFiles}.`);
             resolve(zipResult);
         });
         return result;
@@ -98,7 +98,7 @@ export default class Zipper {
         //      page.cs                             - if page.cs is at the project's root dir
         //      services/internal/myservice.js      - if myservice.js is in a nested dir
         if (this.filenameFilter.includes(relativeFilePath)) {
-            this.log.debug(` Add: ${ absoluteFilePath }`);
+            this.log.debug(` Add: ${absoluteFilePath}`);
 
             const relativeDirInArchive = upath.relative(srcDir, parentDir);
             this.archiver.file(absoluteFilePath, {
@@ -106,7 +106,7 @@ export default class Zipper {
                 prefix: relativeDirInArchive
             });
         } else {
-            this.log.debug(`Skip: ${ absoluteFilePath }`);
+            this.log.debug(`Skip: ${absoluteFilePath}`);
         }
 
         discoverNextFile();

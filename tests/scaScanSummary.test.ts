@@ -1,14 +1,14 @@
-import { ScaSummaryEvaluator } from '../src/services/scaSummaryEvaluator';
-import { ScaConfig, ScanResults } from '../src';
-import { ScanConfig } from '../src';
-import { SastConfig } from '../src';
-import { Logger } from '../src';
-import * as assert from 'assert';
+import { ScaSummaryEvaluator } from "../src/services/scaSummaryEvaluator";
+import { ScaConfig, ScanResults } from "../src";
+import { ScanConfig } from "../src";
+import { SastConfig } from "../src";
+import { Logger } from "../src";
+import * as assert from "assert";
 import { SourceLocationType } from '../src';
 import { RemoteRepositoryInfo } from '../src';
 import { CxClient } from '../src';
 
-describe('Sca Scan Summary', () => {
+describe("Sca Scan Summary", () => {
     it('should return threshold errors in summary', () => {
         const config = getScaConfig();
         config.vulnerabilityThreshold = true;
@@ -50,7 +50,7 @@ describe('Sca Scan Summary', () => {
     });
 });
 
-describe('Sca Scan On Remote Source', () => {
+describe("Sca Scan On Remote Source", () => {
 
     const cxClient: CxClient = new CxClient(getDummyLogger());
     const config: ScanConfig = getScanConfig();
@@ -82,7 +82,7 @@ describe('Sca Scan On Remote Source', () => {
     });
 });
 
-describe('Sca Scan On Local Source', () => {
+describe("Sca Scan On Local Source", () => {
 
     const cxClient: CxClient = new CxClient(getDummyLogger());
     const config: ScanConfig = getScanConfig();
@@ -92,7 +92,13 @@ describe('Sca Scan On Local Source', () => {
     // Set the following attribute if you want to debug finger print file.
     config.scaConfig!.fingerprintsFilePath = '';
     //---------------------------------------------------------------------------//
-    config.sourceLocation = `${ __dirname }\\tests-resources\\Java-Vulnerable-Project`;
+    //---------------------------------------------------------------------------//
+    // You need to specify an absolute path for a project on your local machine that
+    // you would like to scan.
+    // If you don't have one, you can use this git project:
+    // https://github.com/CSPF-Founder/JavaVulnerableLab
+    config.sourceLocation = '';
+    //---------------------------------------------------------------------------//
 
     it('should return results when running on sync mode', async () => {
         config.isSyncMode = true;
@@ -118,11 +124,11 @@ describe('Sca Scan On Local Source', () => {
 
 function getScanConfig(): ScanConfig {
     return {
-        sourceLocation: '',
-        projectName: '',
+        sourceLocation: "",
+        projectName: "",
         enableSastScan: false,
         enableDependencyScan: true,
-        cxOrigin: 'JsCommon',
+        cxOrigin: "JsCommon",
         sastConfig: getSastConfig(),
         scaConfig: getScaConfig(),
         isSyncMode: false
@@ -155,19 +161,19 @@ function getScaConfig(): ScaConfig {
 
 function getSastConfig(): SastConfig {
     return {
-        username: '',
-        password: '',
-        teamName: '',
+        username: "",
+        password: "",
+        teamName: "",
         teamId: 0,
-        serverUrl: '',
+        serverUrl: "",
         isPublic: false,
         denyProject: false,
-        folderExclusion: '',
-        fileExtension: '',
+        folderExclusion: "",
+        fileExtension: "",
         isIncremental: false,
         forceScan: false,
-        comment: '',
-        presetName: '',
+        comment: "",
+        presetName: "",
         presetId: 0,
         scanTimeoutInMinutes: 0,
         enablePolicyViolations: false,

@@ -5,11 +5,19 @@ import * as fs from 'fs';
 
 describe('SHA1 signature', () => {
     it('should calculate file sha1 signature', function () {
-        const fileContent = fs.readFileSync(`${ __dirname }\\tests-resources\\gson-2.2.2.jar`);
+        try {
+            //---------------------------------------------------------------------------//
+            // You need to specify a file in your local machine and compare it's sha1 value,
+            // I used this sha1 calculator: https://emn178.github.io/online-tools/sha1_checksum.html
+            const fileContent = fs.readFileSync('NEED TO SPECIFY A FILE PATH');
+            //---------------------------------------------------------------------------//
 
-        const sha1FileSignature = new Sha1Signature(Uint8Array.from(fileContent));
+            const sha1FileSignature = new Sha1Signature(Uint8Array.from(fileContent));
 
-        assert.equal(sha1FileSignature.value, '1f96456ca233dec780aa224bff076d8e8bca3908');
+            assert.equal(sha1FileSignature.value, 'NEED TO SPECIFY SHA1 VALUE');
+        } catch (e) {
+            console.error('You need to specify a file and it\'s sha1 value')
+        }
     });
 });
 
