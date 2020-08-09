@@ -171,20 +171,26 @@ export class ScaClient {
         this.log.info("Using local directory flow.");
         const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
         let zipFromLocations = [this.sourceLocation];
+        let filePathFiltersAnd: FilePathFilter[] = [new FilePathFilter(this.config.dependencyFileExtension, this.config.dependencyFolderExclusion)];
+        let filePathFiltersOr: FilePathFilter[] = [];
         let fingerprintsFilePath = '';
 
         if (!Boolean(this.config['includeSource'])) {
             const projectResolvingConfiguration = await this.fetchProjectResolvingConfiguration();
-            fingerprintsFilePath = await this.createScanFingerprintsFile(projectResolvingConfiguration.getFingerprintsIncludePattern());
 
-            zipFromLocations.push(fingerprintsFilePath);
-            this.config.dependencyFileExtension = [projectResolvingConfiguration.getManifestsIncludePattern(), ScaClient.FINGERPRINT_FILE_NAME].join(',');
+            filePathFiltersOr.push(new FilePathFilter(projectResolvingConfiguration.getManifestsIncludePattern(), ''));
+
+            fingerprintsFilePath = await this.createScanFingerprintsFile([...filePathFiltersAnd, new FilePathFilter(projectResolvingConfiguration.getFingerprintsIncludePattern(), '')]);
+
+            if (fingerprintsFilePath) {
+                zipFromLocations.push(fingerprintsFilePath);
+                filePathFiltersOr.push(new FilePathFilter(ScaClient.FINGERPRINT_FILE_NAME, ''));
+            }
         } else if (this.config['fingerprintsFilePath']) {
             throw Error('Conflicting config properties, can\'t save fingerprint file when includeSource flag is set to true.');
         }
 
-        const filter: FilePathFilter = new FilePathFilter(this.config.dependencyFileExtension, this.config.dependencyFolderExclusion);
-        const zipper = new Zipper(this.log, filter);
+        const zipper = new Zipper(this.log, filePathFiltersAnd, filePathFiltersOr);
 
         this.log.debug(`Zipping code from ${ zipFromLocations.join(', ') } into file ${ tempFilename }`);
         const zipResult = await zipper.zipDirectory(zipFromLocations, tempFilename);
@@ -204,15 +210,19 @@ export class ScaClient {
         return await this.sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
     }
 
-    private async createScanFingerprintsFile(fingerprintsIncludePattern: string): Promise<string> {
-        const fingerprintsFileFilter = new FilePathFilter(fingerprintsIncludePattern, '');
+    private async createScanFingerprintsFile(fingerprintsFileFilter: FilePathFilter[]): Promise<string> {
         const fingerprintsCollector = new ScaFingerprintCollector(this.log, fingerprintsFileFilter);
         const fingerprintsCollection = await fingerprintsCollector.collectFingerprints(this.sourceLocation);
-        const fingerprintsFilePath = `${ os.tmpdir() }\\${ ScaClient.FINGERPRINT_FILE_NAME }`;
 
-        FileIO.writeToFile(fingerprintsFilePath, fingerprintsCollection);
+        if (fingerprintsCollection.fingerprints && fingerprintsCollection.fingerprints.length) {
+            const fingerprintsFilePath = `${ os.tmpdir() }\\${ ScaClient.FINGERPRINT_FILE_NAME }`;
 
-        return fingerprintsFilePath;
+            FileIO.writeToFile(fingerprintsFilePath, fingerprintsCollection);
+
+            return fingerprintsFilePath;
+        }
+
+        return ''
     }
 
     private async fetchProjectResolvingConfiguration(): Promise<ScaResolvingConfiguration> {

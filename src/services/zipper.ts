@@ -15,7 +15,8 @@ export default class Zipper {
     private totalAddedFiles = 0;
 
     constructor(private readonly log: Logger,
-        private readonly filenameFilter: FilePathFilter) {
+                private readonly filenameFiltersAnd: FilePathFilter[] = [],
+                private readonly filenameFiltersOr: FilePathFilter[] = []) {
     }
 
     zipDirectory(srcDirs: string[], targetPath: string): Promise<ZipResult> {
@@ -41,7 +42,7 @@ export default class Zipper {
                     } else {
                         const index: number = srcDir.lastIndexOf(path.sep);
                         const fileName: string = srcDir.substring(index + 1);
-                        if (this.filenameFilter.includes(fileName)) {
+                        if (this.filenameFiltersAnd.every(filter => filter.includes(fileName)) || this.filenameFiltersOr.some(filter => filter.includes(fileName))) {
                             this.log.debug(` Add: ${ srcDir }`);
                             this.archiver.file(srcDir, {
                                 name: fileName,
@@ -97,8 +98,8 @@ export default class Zipper {
         // relativeFilePath is normalized to contain forward slashes independent of the current OS. Examples:
         //      page.cs                             - if page.cs is at the project's root dir
         //      services/internal/myservice.js      - if myservice.js is in a nested dir
-        if (this.filenameFilter.includes(relativeFilePath)) {
-            this.log.debug(` Add: ${absoluteFilePath}`);
+        if (this.filenameFiltersAnd.every(filter => filter.includes(relativeFilePath)) && (!this.filenameFiltersOr.length || this.filenameFiltersOr.some(filter => filter.includes(relativeFilePath)))) {
+            this.log.debug(` Add: ${ absoluteFilePath }`);
 
             const relativeDirInArchive = upath.relative(srcDir, parentDir);
             this.archiver.file(absoluteFilePath, {

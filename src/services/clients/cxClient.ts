@@ -170,7 +170,7 @@ export class CxClient {
         this.log.debug(`Zipping source code at ${this.config.sourceLocation} into file ${tempFilename}`);
         let filter: FilePathFilter;
         filter = new FilePathFilter(this.sastConfig.fileExtension, this.sastConfig.folderExclusion);
-        const zipper = new Zipper(this.log, filter);
+        const zipper = new Zipper(this.log, [filter]);
         const zipResult = await zipper.zipDirectory(this.config.sourceLocation, tempFilename);
         if (zipResult.fileCount === 0) {
             throw new TaskSkippedError('Zip file is empty: no source to scan');

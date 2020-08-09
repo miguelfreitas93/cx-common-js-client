@@ -11,7 +11,7 @@ export class ScaFingerprintCollector {
     private fingerprintsCollection!: ScanFingerprints;
 
     constructor(private readonly log: Logger,
-                private readonly filenameFilter: FilePathFilter) {}
+                private readonly filenameFilters: FilePathFilter[]) {}
 
     public collectFingerprints(srcPath: string): Promise<ScanFingerprints> {
         return new Promise<ScanFingerprints>((resolve, reject) => {
@@ -37,7 +37,7 @@ export class ScaFingerprintCollector {
         const absoluteFilePath = upath.resolve(parentDir, fileStats.name);
         const relativeFilePath = upath.relative(srcDir, absoluteFilePath);
 
-        if (this.filenameFilter.includes(relativeFilePath)) {
+        if (this.filenameFilters.every(filter => filter.includes(relativeFilePath))) {
             this.log.debug(`Collecting Fingerprint: ${ absoluteFilePath }`);
 
             const relativePath = upath.relative(srcDir, parentDir) ? `${ upath.relative(srcDir, parentDir) }/${ fileStats.name }` : fileStats.name;

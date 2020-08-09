@@ -4,11 +4,11 @@ import { ScanConfig } from "../src";
 import { SastConfig } from "../src";
 import { Logger } from "../src";
 import * as assert from "assert";
-import * as fs from "fs";
+import * as fs from 'fs';
 import { SourceLocationType } from '../src';
 import { RemoteRepositoryInfo } from '../src';
 import { CxClient } from '../src';
-import * as os from "os";
+import * as os from 'os';
 
 describe("Sca Scan Summary", () => {
     it('should return threshold errors in summary', () => {
@@ -84,41 +84,49 @@ describe("Sca Scan On Remote Source", () => {
     });
 });
 
-describe("Sca Scan On Local Source", () => {
+describe('Sca Scan On Local Source', () => {
 
-    const cxClient: CxClient = new CxClient(getDummyLogger());
-    const config: ScanConfig = getScanConfig();
-    config.projectName = 'ScaUnitTestLocal';
-    config.scaConfig!.sourceLocationType = SourceLocationType.LOCAL_DIRECTORY;
-    //---------------------------------------------------------------------------//
-    // Set the following attribute if you want to debug finger print file.
-    config.scaConfig!.fingerprintsFilePath = '';
-    //---------------------------------------------------------------------------//
-    //---------------------------------------------------------------------------//
-    // You need to specify an absolute path for a project on your local machine that
-    // you would like to scan.
-    // If you don't have one, you can use this git project:
-    // https://github.com/CSPF-Founder/JavaVulnerableLab
-    config.sourceLocation = '';
-    //---------------------------------------------------------------------------//
+    let cxClient: CxClient;
+    let config: ScanConfig;
+
+    beforeEach(() => {
+        cxClient = new CxClient(getDummyLogger());
+        config = getScanConfig();
+
+        config.projectName = 'ScaUnitTestLocal';
+        config.scaConfig!.sourceLocationType = SourceLocationType.LOCAL_DIRECTORY;
+        //---------------------------------------------------------------------------//
+        // Set the following attribute if you want to debug finger print file.
+        config.scaConfig!.fingerprintsFilePath = '';
+        //---------------------------------------------------------------------------//
+        //---------------------------------------------------------------------------//
+        // You need to specify an absolute path for a project on your local machine that
+        // you would like to scan.
+        // If you don't have one, you can use this git project:
+        // https://github.com/CSPF-Founder/JavaVulnerableLab
+        config.sourceLocation = '';
+        //---------------------------------------------------------------------------//
+    });
 
     it('should return results when running on sync mode', async () => {
         config.isSyncMode = true;
+
         const scanResults: ScanResults = await cxClient.scan(config);
         const scaResults = scanResults.scaResults;
+
         assert.equal(scanResults.syncMode, true);
         assert.ok(scaResults);
+
         if (scaResults) {
             assert.equal(scaResults.resultReady, true);
-            assert.notEqual(scaResults.highVulnerability, 0);
-            assert.notEqual(scaResults.mediumVulnerability, 0);
-            assert.equal(scaResults.lowVulnerability, 0);
         }
     });
 
     it('should not return results when running on async mode', async () => {
         config.isSyncMode = false;
+
         const scanResults: ScanResults = await cxClient.scan(config);
+
         assert.equal(scanResults.syncMode, false);
         assert.ok(!scanResults.scaResults);
     });
@@ -127,6 +135,7 @@ describe("Sca Scan On Local Source", () => {
         config.scaConfig!.includeSource = true;
 
         const scanResults: ScanResults = await cxClient.scan(config);
+
         assert.equal(scanResults.syncMode, false);
         assert.ok(!scanResults.scaResults);
     });
@@ -136,21 +145,48 @@ describe("Sca Scan On Local Source", () => {
         // TODO set this attribute before running test
         config.scaConfig!.fingerprintsFilePath = '';
         //---------------------------------------------------------------------------//
-        config.scaConfig!.includeSource = false;
 
-        const scanResults: ScanResults = await cxClient.scan(config);
+        await cxClient.scan(config);
 
         assert.ok(fs.existsSync(`${ config.scaConfig!.fingerprintsFilePath }\\CxSCAFingerprints.json`));
     });
 
-    it('should not save fingerprints file if fingerprintsFilePath is not set', async () => {
+    it('should not scan if location does not exists inside sourceFolder', async () => {
         //---------------------------------------------------------------------------//
         // TODO set this attribute before running test
-        config.scaConfig!.fingerprintsFilePath = '';
+        // Set to location without manifest file
+        config.scaConfig!.dependencyFileExtension = '';
         //---------------------------------------------------------------------------//
-        config.scaConfig!.fingerprintsFilePath = '';
+
+        await (async () => {
+            let f = () => {};
+
+            try {
+                await cxClient.scan(config);
+            } catch (e) {
+                f = () => {throw e;};
+            } finally {
+                assert.throws(f);
+            }
+        })();
+    });
+
+    it('should send only fingerprints file if manifests are not inside folder', async () => {
+        //---------------------------------------------------------------------------//
+        // TODO set this attribute before running test
+        // Set to location without manifest file
+        config.scaConfig!.dependencyFileExtension = '';
+        //---------------------------------------------------------------------------//
+        config.isSyncMode = true;
 
         const scanResults: ScanResults = await cxClient.scan(config);
+        const scaResults = scanResults.scaResults;
+
+        assert.ok(scaResults);
+    });
+
+    it('should not save fingerprints file if fingerprintsFilePath is not set', async () => {
+        await cxClient.scan(config);
 
         try {
             if (fs.existsSync(`${ os.tmpdir() }\\.cxsca.sig`)) {
