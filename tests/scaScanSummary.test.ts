@@ -4,9 +4,11 @@ import { ScanConfig } from "../src";
 import { SastConfig } from "../src";
 import { Logger } from "../src";
 import * as assert from "assert";
+import * as fs from "fs";
 import { SourceLocationType } from '../src';
 import { RemoteRepositoryInfo } from '../src';
 import { CxClient } from '../src';
+import * as os from "os";
 
 describe("Sca Scan Summary", () => {
     it('should return threshold errors in summary', () => {
@@ -119,6 +121,64 @@ describe("Sca Scan On Local Source", () => {
         const scanResults: ScanResults = await cxClient.scan(config);
         assert.equal(scanResults.syncMode, false);
         assert.ok(!scanResults.scaResults);
+    });
+
+    it('should send all source files to scan', async () => {
+        config.scaConfig!.includeSource = true;
+
+        const scanResults: ScanResults = await cxClient.scan(config);
+        assert.equal(scanResults.syncMode, false);
+        assert.ok(!scanResults.scaResults);
+    });
+
+    it('should save fingerprints file', async () => {
+        //---------------------------------------------------------------------------//
+        // TODO set this attribute before running test
+        config.scaConfig!.fingerprintsFilePath = '';
+        //---------------------------------------------------------------------------//
+        config.scaConfig!.includeSource = false;
+
+        const scanResults: ScanResults = await cxClient.scan(config);
+
+        assert.ok(fs.existsSync(`${ config.scaConfig!.fingerprintsFilePath }\\CxSCAFingerprints.json`));
+    });
+
+    it('should not save fingerprints file if fingerprintsFilePath is not set', async () => {
+        //---------------------------------------------------------------------------//
+        // TODO set this attribute before running test
+        config.scaConfig!.fingerprintsFilePath = '';
+        //---------------------------------------------------------------------------//
+        config.scaConfig!.fingerprintsFilePath = '';
+
+        const scanResults: ScanResults = await cxClient.scan(config);
+
+        try {
+            if (fs.existsSync(`${ os.tmpdir() }\\.cxsca.sig`)) {
+                assert.ok(false);
+            }
+        } catch (err) {
+            assert.ok(true);
+        }
+    });
+
+    it('should throw if includeSource & fingerprintsFilePath both exists', async () => {
+        //---------------------------------------------------------------------------//
+        // TODO set this attribute before running test
+        config.scaConfig!.fingerprintsFilePath = '';
+        //---------------------------------------------------------------------------//
+        config.scaConfig!.includeSource = true;
+
+        await (async () => {
+            let f = () => {};
+
+            try {
+                await cxClient.scan(config);
+            } catch (e) {
+                f = () => {throw e;};
+            } finally {
+                assert.throws(f);
+            }
+        })();
     });
 });
 
