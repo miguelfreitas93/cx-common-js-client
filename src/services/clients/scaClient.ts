@@ -169,7 +169,6 @@ export class ScaClient {
     }
 
     private async submitSourceFromLocalDir(): Promise<any> {
-        this.log.info("Using local directory flow.");
         const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
         let zipFromLocations = [this.sourceLocation];
         let filePathFiltersAnd: FilePathFilter[] = [new FilePathFilter(this.config.dependencyFileExtension, this.config.dependencyFolderExclusion)];
@@ -177,6 +176,7 @@ export class ScaClient {
         let fingerprintsFilePath = '';
 
         if (!Boolean(this.config.includeSource)) {
+            this.log.info("Using manifest and fingerprint flow.");
             const projectResolvingConfiguration = await this.fetchProjectResolvingConfiguration();
 
             filePathFiltersOr.push(new FilePathFilter(projectResolvingConfiguration.getManifestsIncludePattern(), ''));
@@ -189,6 +189,8 @@ export class ScaClient {
             }
         } else if (this.config.fingerprintsFilePath) {
             throw Error('Conflicting config properties, can\'t save fingerprint file when includeSource flag is set to true.');
+        } else {
+            this.log.info("Using local directory flow.");
         }
 
         const zipper = new Zipper(this.log, filePathFiltersAnd, filePathFiltersOr);
