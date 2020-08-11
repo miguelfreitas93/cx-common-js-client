@@ -24,6 +24,7 @@ import * as os from 'os';
 import { ScaSummaryEvaluator } from "../scaSummaryEvaluator";
 import { ScanSummary } from "../../dto/scanSummary";
 import { ScaFingerprintCollector } from '../../dto/sca/scaFingerprintCollector';
+import * as path from "path";
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
@@ -43,7 +44,7 @@ export class ScaClient {
     private static readonly WEB_REPORT: string = "/#/projects/%s/reports/%s";
 
     private static readonly SETTINGS_API = '/settings/';
-    private static readonly RESOLVING_CONFIGURATION_API = (projectId: string) => ScaClient.SETTINGS_API + `projects/${ projectId }/resolving-configuration`;
+    private static readonly RESOLVING_CONFIGURATION_API = (projectId: string) => ScaClient.SETTINGS_API + `projects/${projectId}/resolving-configuration`;
 
     private static FINGERPRINT_FILE_NAME = '.cxsca.sig';
     private static DEFAULT_FINGERPRINT_FILENAME = 'CxSCAFingerprints.json';
@@ -175,7 +176,7 @@ export class ScaClient {
         let filePathFiltersOr: FilePathFilter[] = [];
         let fingerprintsFilePath = '';
 
-        if (!Boolean(this.config['includeSource'])) {
+        if (!Boolean(this.config.includeSource)) {
             const projectResolvingConfiguration = await this.fetchProjectResolvingConfiguration();
 
             filePathFiltersOr.push(new FilePathFilter(projectResolvingConfiguration.getManifestsIncludePattern(), ''));
@@ -186,22 +187,22 @@ export class ScaClient {
                 zipFromLocations.push(fingerprintsFilePath);
                 filePathFiltersOr.push(new FilePathFilter(ScaClient.FINGERPRINT_FILE_NAME, ''));
             }
-        } else if (this.config['fingerprintsFilePath']) {
+        } else if (this.config.fingerprintsFilePath) {
             throw Error('Conflicting config properties, can\'t save fingerprint file when includeSource flag is set to true.');
         }
 
         const zipper = new Zipper(this.log, filePathFiltersAnd, filePathFiltersOr);
 
-        this.log.debug(`Zipping code from ${ zipFromLocations.join(', ') } into file ${ tempFilename }`);
+        this.log.debug(`Zipping code from ${zipFromLocations.join(', ')} into file ${tempFilename}`);
         const zipResult = await zipper.zipDirectory(zipFromLocations, tempFilename);
 
         if (zipResult.fileCount === 0) {
             throw new TaskSkippedError('Zip file is empty: no source to scan');
         }
 
-        if (!Boolean(this.config['includeSource']) && this.config['fingerprintsFilePath']) {
-            this.log.debug(`Saving fingerprint file at: ${ this.config['fingerprintsFilePath'] }\\${ ScaClient.DEFAULT_FINGERPRINT_FILENAME }`);
-            FileIO.moveFile(fingerprintsFilePath, `${ this.config['fingerprintsFilePath'] }\\${ ScaClient.DEFAULT_FINGERPRINT_FILENAME }`);
+        if (!Boolean(this.config.includeSource) && this.config.fingerprintsFilePath) {
+            this.log.debug(`Saving fingerprint file at: ${this.config.fingerprintsFilePath}${path.sep}${ScaClient.DEFAULT_FINGERPRINT_FILENAME}`);
+            FileIO.moveFile(fingerprintsFilePath, `${this.config.fingerprintsFilePath}${path.sep}${ScaClient.DEFAULT_FINGERPRINT_FILENAME}`);
         }
 
         this.log.info('Uploading the zipped source file...');
@@ -215,14 +216,14 @@ export class ScaClient {
         const fingerprintsCollection = await fingerprintsCollector.collectFingerprints(this.sourceLocation);
 
         if (fingerprintsCollection.fingerprints && fingerprintsCollection.fingerprints.length) {
-            const fingerprintsFilePath = `${ os.tmpdir() }\\${ ScaClient.FINGERPRINT_FILE_NAME }`;
+            const fingerprintsFilePath = `${os.tmpdir()}${path.sep}${ScaClient.FINGERPRINT_FILE_NAME}`;
 
             FileIO.writeToFile(fingerprintsFilePath, fingerprintsCollection);
 
             return fingerprintsFilePath;
         }
 
-        return ''
+        return '';
     }
 
     private async fetchProjectResolvingConfiguration(): Promise<ScaResolvingConfiguration> {
