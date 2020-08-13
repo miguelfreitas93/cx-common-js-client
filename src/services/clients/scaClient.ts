@@ -331,7 +331,8 @@ The Build Failed for the Following Reasons:
         const MESSAGE = "Unable to generate web report link. ";
         let result: string = '';
         try {
-            const webAppUrl: string = this.config.webAppUrl;
+            let webAppUrl: string = this.config.webAppUrl;
+            webAppUrl = this.fromatWebAppURL(webAppUrl);
             if (!webAppUrl || webAppUrl === '') {
                 this.log.warning(MESSAGE + "Web app URL is not specified.");
             } else {
@@ -341,6 +342,15 @@ The Build Failed for the Following Reasons:
             this.log.warning(MESSAGE + err);
         }
         return result;
+    }
+
+    private fromatWebAppURL(webAppURL: string): string{
+        const stringLength = webAppURL.length;
+        const lastChar = webAppURL.charAt(stringLength-1);
+        if(lastChar == '/'){
+            webAppURL = webAppURL.substring(0,stringLength-1)
+        }
+        return webAppURL;
     }
 
     private async getSummaryReport(reportId: string): Promise<ScaSummaryResults> {
