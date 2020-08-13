@@ -33,6 +33,10 @@ export class FilePathFilter {
         return matchesAnyInclusionPattern && !matchesAnyExclusionPattern;
     }
 
+    hasInclude(): boolean {
+        return Boolean(this.include.length)
+    }
+
     private parseFilterPattern(filterPattern: string) {
         // Distribute the patterns from the input string into inclusion or exclusion arrays.
         filterPattern.split(this.PATTERN_SEPARATOR)

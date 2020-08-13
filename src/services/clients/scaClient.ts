@@ -178,8 +178,12 @@ export class ScaClient {
         if (!Boolean(this.config.includeSource)) {
             this.log.info("Using manifest and fingerprint flow.");
             const projectResolvingConfiguration = await this.fetchProjectResolvingConfiguration();
+            const manifestsIncludeFilter = new FilePathFilter(projectResolvingConfiguration.getManifestsIncludePattern(), '')
 
-            filePathFiltersOr.push(new FilePathFilter(projectResolvingConfiguration.getManifestsIncludePattern(), ''));
+            if (!manifestsIncludeFilter.hasInclude())
+                throw Error(`Using manifest only mode requires include filter. Resolving config does not have include patterns defined: ${projectResolvingConfiguration.getManifestsIncludePattern()}`)
+
+            filePathFiltersOr.push(manifestsIncludeFilter);
 
             fingerprintsFilePath = await this.createScanFingerprintsFile([...filePathFiltersAnd, new FilePathFilter(projectResolvingConfiguration.getFingerprintsIncludePattern(), '')]);
 
