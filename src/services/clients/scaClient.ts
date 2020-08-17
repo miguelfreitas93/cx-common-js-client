@@ -337,19 +337,17 @@ The Build Failed for the Following Reasons:
         let result: string = '';
 
         try {
-            let webAppUrl: string = this.config.webAppUrl;
+            const webAppUrl: string = this.config.webAppUrl;
             if (!webAppUrl || webAppUrl === '') {
                 this.log.warning(MESSAGE + "Web app URL is not specified.");
             } else {
-                result = `${webAppUrl}/#/projects/${this.projectId}/reports/${reportId}`;
-                result = url.resolve(webAppUrl,`/#/projects/${this.projectId}/reports/${reportId}`);
+                result = url.resolve(webAppUrl, `/#/projects/${this.projectId}/reports/${reportId}`);
             }
         } catch (err) {
             this.log.warning(MESSAGE + err);
         }
         return result;
     }
-
 
     private async getSummaryReport(reportId: string): Promise<ScaSummaryResults> {
         this.log.debug("Getting summary report.");

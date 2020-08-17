@@ -35,7 +35,7 @@ export class ArmClient {
         this.stopwatch.start();
 
         this.log.info('Waiting for server to retrieve policy violations.');
-        let lastStatus = ArmStatus.None;
+        let lastStatus;
         try {
             const waiter = new Waiter();
             lastStatus = await waiter.waitForTaskToFinish<ArmStatus>(
@@ -81,7 +81,7 @@ export class ArmClient {
             return Promise.reject(status);
         }
 
-    };
+    }
 
     private logWaitingProgress = (armStatus: ArmStatus) => {
         this.log.info(`Waiting for server to retrieve policy violations. Elapsed time: ${this.stopwatch.getElapsedString()}. Status: ${armStatus}`)
