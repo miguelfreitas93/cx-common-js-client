@@ -6,6 +6,7 @@ import { SCAResults } from "../../dto/sca/scaResults";
 import { ScaSummaryResults } from "../../dto/sca/report/scaSummaryResults";
 import { Project } from "../../dto/sca/project";
 import { ClientType } from '../../dto/sca/clientType';
+import { ScaResolvingConfiguration } from '../../dto/sca/scaResolvingConfiguration';
 import { Finding } from "../../dto/sca/report/finding";
 import { Package } from "../../dto/sca/report/package";
 import { ScanResults } from '../../dto/scanResults';
@@ -14,12 +15,16 @@ import { SourceLocationType } from '../../dto/sca/sourceLocationType';
 import { tmpNameSync } from "tmp";
 import { FilePathFilter } from "../filePathFilter";
 import Zipper from "../zipper";
+import FileIO from '../fileIO';
 import { TaskSkippedError } from "../../dto/taskSkippedError";
 import { RemoteRepositoryInfo } from '../../dto/sca/remoteRepositoryInfo';
 import { ScaReportResults } from '../../dto/sca/scaReportResults';
 import * as url from "url";
+import * as os from 'os';
 import { ScaSummaryEvaluator } from "../scaSummaryEvaluator";
 import { ScanSummary } from "../../dto/scanSummary";
+import { ScaFingerprintCollector } from '../../dto/sca/scaFingerprintCollector';
+import * as path from "path";
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
@@ -37,6 +42,13 @@ export class ScaClient {
     private static readonly CREATE_SCAN: string = "/api/scans";
     private static readonly GET_SCAN: string = "/api/scans/%s";
     private static readonly WEB_REPORT: string = "/#/projects/%s/reports/%s";
+
+
+    private static readonly SETTINGS_API = '/settings/';
+    private static readonly RESOLVING_CONFIGURATION_API = (projectId: string) => ScaClient.SETTINGS_API + `projects/${projectId}/resolving-configuration`;
+
+    private static FINGERPRINT_FILE_NAME = '.cxsca.sig';
+    private static DEFAULT_FINGERPRINT_FILENAME = 'CxSCAFingerprints.json';
 
     private static readonly CLOUD_ACCESS_CONTROL_BASE_URL: string = "https://platform.checkmarx.net";
 
@@ -158,19 +170,77 @@ export class ScaClient {
     }
 
     private async submitSourceFromLocalDir(): Promise<any> {
-        this.log.info("Using local directory flow.");
         const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
-        this.log.debug(`Zipping source code at ${this.sourceLocation} into file ${tempFilename}`);
-        const filter: FilePathFilter = new FilePathFilter(this.config.dependencyFileExtension, this.config.dependencyFolderExclusion);
-        const zipper = new Zipper(this.log, filter);
-        const zipResult = await zipper.zipDirectory(this.sourceLocation, tempFilename);
+        let zipFromLocations = [this.sourceLocation];
+        let filePathFiltersAnd: FilePathFilter[] = [new FilePathFilter(this.config.dependencyFileExtension, this.config.dependencyFolderExclusion)];
+        let filePathFiltersOr: FilePathFilter[] = [];
+        let fingerprintsFilePath = '';
+
+        if (!Boolean(this.config.includeSource)) {
+            this.log.info("Using manifest and fingerprint flow.");
+            const projectResolvingConfiguration = await this.fetchProjectResolvingConfiguration();
+            const manifestsIncludeFilter = new FilePathFilter(projectResolvingConfiguration.getManifestsIncludePattern(), '')
+
+            if (!manifestsIncludeFilter.hasInclude())
+                throw Error(`Using manifest only mode requires include filter. Resolving config does not have include patterns defined: ${projectResolvingConfiguration.getManifestsIncludePattern()}`)
+
+            filePathFiltersOr.push(manifestsIncludeFilter);
+
+            fingerprintsFilePath = await this.createScanFingerprintsFile([...filePathFiltersAnd, new FilePathFilter(projectResolvingConfiguration.getFingerprintsIncludePattern(), '')]);
+
+            if (fingerprintsFilePath) {
+                zipFromLocations.push(fingerprintsFilePath);
+                filePathFiltersOr.push(new FilePathFilter(ScaClient.FINGERPRINT_FILE_NAME, ''));
+            }
+        } else if (this.config.fingerprintsFilePath) {
+            throw Error('Conflicting config properties, can\'t save fingerprint file when includeSource flag is set to true.');
+        } else {
+            this.log.info("Using local directory flow.");
+        }
+
+        const zipper = new Zipper(this.log, filePathFiltersAnd, filePathFiltersOr);
+
+        this.log.debug(`Zipping code from ${zipFromLocations.join(', ')} into file ${tempFilename}`);
+        const zipResult = await zipper.zipDirectory(zipFromLocations, tempFilename);
+
         if (zipResult.fileCount === 0) {
             throw new TaskSkippedError('Zip file is empty: no source to scan');
         }
-        this.log.info("Uploading the zipped source file...");
+
+        if (!Boolean(this.config.includeSource) && this.config.fingerprintsFilePath) {
+            this.log.debug(`Saving fingerprint file at: ${this.config.fingerprintsFilePath}${path.sep}${ScaClient.DEFAULT_FINGERPRINT_FILENAME}`);
+            FileIO.moveFile(fingerprintsFilePath, `${this.config.fingerprintsFilePath}${path.sep}${ScaClient.DEFAULT_FINGERPRINT_FILENAME}`);
+        }
+
+        this.log.info('Uploading the zipped source file...');
         const uploadedArchiveUrl: string = await this.getSourceUploadUrl();
         await this.uploadToAWS(uploadedArchiveUrl, tempFilename);
         return await this.sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
+    }
+
+    private async createScanFingerprintsFile(fingerprintsFileFilter: FilePathFilter[]): Promise<string> {
+        const fingerprintsCollector = new ScaFingerprintCollector(this.log, fingerprintsFileFilter);
+        const fingerprintsCollection = await fingerprintsCollector.collectFingerprints(this.sourceLocation);
+
+        if (fingerprintsCollection.fingerprints && fingerprintsCollection.fingerprints.length) {
+            const fingerprintsFilePath = `${os.tmpdir()}${path.sep}${ScaClient.FINGERPRINT_FILE_NAME}`;
+
+            FileIO.writeToFile(fingerprintsFilePath, fingerprintsCollection);
+
+            return fingerprintsFilePath;
+        }
+
+        return '';
+    }
+
+    private async fetchProjectResolvingConfiguration(): Promise<ScaResolvingConfiguration> {
+        const guid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c: string) => {
+            const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+        this.log.info(`Sending a request to fetch resolving configuration.`);
+        const response: any = await this.httpClient.getRequest(ScaClient.RESOLVING_CONFIGURATION_API(guid));
+        return new ScaResolvingConfiguration((response['manifests'] || []), (response['fingerprints'] || []));
     }
 
     private async uploadToAWS(uploadUrl: string, file: string) {
@@ -265,12 +335,13 @@ The Build Failed for the Following Reasons:
     private getWebReportLink(reportId: string): string {
         const MESSAGE = "Unable to generate web report link. ";
         let result: string = '';
+
         try {
             const webAppUrl: string = this.config.webAppUrl;
             if (!webAppUrl || webAppUrl === '') {
                 this.log.warning(MESSAGE + "Web app URL is not specified.");
             } else {
-                result = `${webAppUrl}/#/projects/${this.projectId}/reports/${reportId}`;
+                result = url.resolve(webAppUrl, `/#/projects/${this.projectId}/reports/${reportId}`);
             }
         } catch (err) {
             this.log.warning(MESSAGE + err);
