@@ -43,6 +43,7 @@ export class ScaClient {
     private static readonly GET_SCAN: string = "/api/scans/%s";
     private static readonly WEB_REPORT: string = "/#/projects/%s/reports/%s";
 
+
     private static readonly SETTINGS_API = '/settings/';
     private static readonly RESOLVING_CONFIGURATION_API = (projectId: string) => ScaClient.SETTINGS_API + `projects/${projectId}/resolving-configuration`;
 
@@ -334,13 +335,14 @@ The Build Failed for the Following Reasons:
     private getWebReportLink(reportId: string): string {
         const MESSAGE = "Unable to generate web report link. ";
         let result: string = '';
+
         try {
             let webAppUrl: string = this.config.webAppUrl;
-            webAppUrl = this.fromatWebAppURL(webAppUrl);
             if (!webAppUrl || webAppUrl === '') {
                 this.log.warning(MESSAGE + "Web app URL is not specified.");
             } else {
                 result = `${webAppUrl}/#/projects/${this.projectId}/reports/${reportId}`;
+                result = url.resolve(webAppUrl,`/#/projects/${this.projectId}/reports/${reportId}`);
             }
         } catch (err) {
             this.log.warning(MESSAGE + err);
@@ -348,14 +350,6 @@ The Build Failed for the Following Reasons:
         return result;
     }
 
-    private fromatWebAppURL(webAppURL: string): string{
-        const stringLength = webAppURL.length;
-        const lastChar = webAppURL.charAt(stringLength-1);
-        if(lastChar == '/'){
-            webAppURL = webAppURL.substring(0,stringLength-1)
-        }
-        return webAppURL;
-    }
 
     private async getSummaryReport(reportId: string): Promise<ScaSummaryResults> {
         this.log.debug("Getting summary report.");
