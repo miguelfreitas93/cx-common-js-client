@@ -38,7 +38,7 @@
     "mkdirp": "^1.0.4",
     "parse-ms": "^2.1.0",
     "promise-poller": "^1.9.1",
-    "superagent": "^5.2.2",
+    "superagent": "^6.1.0",
     "tmp": "^0.2.1",
     "upath": "^1.2.0",
     "walk": "^2.3.14",
