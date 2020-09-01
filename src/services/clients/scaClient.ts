@@ -212,7 +212,7 @@ export class ScaClient {
             FileIO.moveFile(fingerprintsFilePath, `${this.config.fingerprintsFilePath}${path.sep}${ScaClient.DEFAULT_FINGERPRINT_FILENAME}`);
         }
 
-        this.log.info('Uploading the zipped source file...');
+        this.log.info('Uploading the zipped data...');
         const uploadedArchiveUrl: string = await this.getSourceUploadUrl();
         await this.uploadToAWS(uploadedArchiveUrl, tempFilename);
         return await this.sendStartScanRequest(SourceLocationType.LOCAL_DIRECTORY, uploadedArchiveUrl);
