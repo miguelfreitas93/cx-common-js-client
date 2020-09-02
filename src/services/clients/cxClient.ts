@@ -175,7 +175,7 @@ export class CxClient {
         if (zipResult.fileCount === 0) {
             throw new TaskSkippedError('Zip file is empty: no source to scan');
         }
-        this.log.info(`Uploading the zipped source code.`);
+        this.log.info(`Uploading the zipped data.`);
         const urlPath = `projects/${this.projectId}/sourceCode/attachments`;
         await this.httpClient.postMultipartRequest(urlPath,
             { id: this.projectId },
