@@ -19,7 +19,7 @@ export default class Zipper {
         private readonly filenameFiltersOr: FilePathFilter[] = []) {
     }
 
-    private addFileToZip(srcFile: string) {
+    private addSingleFileToZip(srcFile: string) {
         const index: number = srcFile.lastIndexOf(path.sep);
         const fileName: string = srcFile.substring(index + 1);
         if (this.filenameFiltersAnd.every(filter => filter.includes(fileName)) || this.filenameFiltersOr.some(filter => filter.includes(fileName))) {
@@ -43,7 +43,7 @@ export default class Zipper {
             this.archiver.pipe(zipOutput);
 
             if (fingerprintsFile) {
-                this.addFileToZip(fingerprintsFile);
+                this.addSingleFileToZip(fingerprintsFile);
             }
 
             if (fs.lstatSync(srcDir).isDirectory()) {
@@ -53,12 +53,12 @@ export default class Zipper {
                 walker.on('file', this.addFileToArchive);
                 walker.on('end', () => {
                     this.log.debug('Finished discovering files in source directory.');
+                    this.archiver.finalize();
                 });
             } else {
-                this.addFileToZip(srcDir);
+                this.addSingleFileToZip(srcDir);
+                this.archiver.finalize();
             }
-
-            this.archiver.finalize();
         });
     }
 
