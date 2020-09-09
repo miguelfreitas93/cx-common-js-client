@@ -171,11 +171,11 @@ export class CxClient {
         let filter: FilePathFilter;
         filter = new FilePathFilter(this.sastConfig.fileExtension, this.sastConfig.folderExclusion);
         const zipper = new Zipper(this.log, [filter]);
-        const zipResult = await zipper.zipDirectory([this.config.sourceLocation], tempFilename);
+        const zipResult = await zipper.zipDirectory(this.config.sourceLocation, tempFilename);
         if (zipResult.fileCount === 0) {
             throw new TaskSkippedError('Zip file is empty: no source to scan');
         }
-        this.log.info(`Uploading the zipped data.`);
+        this.log.info(`Uploading the zipped source code.`);
         const urlPath = `projects/${this.projectId}/sourceCode/attachments`;
         await this.httpClient.postMultipartRequest(urlPath,
             { id: this.projectId },

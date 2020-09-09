@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from "path";
 import archiver, { Archiver, ArchiverError, ProgressData } from 'archiver';
 import { Logger } from "./logger";
-import { walkSync } from "walk";
+import { walk } from "walk";
 import { FilePathFilter } from "./filePathFilter";
 import { ZipResult } from "../dto/zipResult";
 import * as upath from 'upath';
@@ -10,17 +10,31 @@ import * as upath from 'upath';
 export default class Zipper {
     private archiver!: Archiver;
 
-    private srcDirs: string[] = [];
+    private srcDir: string = '';
 
     private totalAddedFiles = 0;
 
     constructor(private readonly log: Logger,
-                private readonly filenameFiltersAnd: FilePathFilter[] = [],
-                private readonly filenameFiltersOr: FilePathFilter[] = []) {
+        private readonly filenameFiltersAnd: FilePathFilter[] = [],
+        private readonly filenameFiltersOr: FilePathFilter[] = []) {
     }
 
-    zipDirectory(srcDirs: string[], targetPath: string): Promise<ZipResult> {
-        this.srcDirs = srcDirs;
+    private addFileToZip(srcFile: string) {
+        const index: number = srcFile.lastIndexOf(path.sep);
+        const fileName: string = srcFile.substring(index + 1);
+        if (this.filenameFiltersAnd.every(filter => filter.includes(fileName)) || this.filenameFiltersOr.some(filter => filter.includes(fileName))) {
+            this.log.debug(` Add: ${srcFile}`);
+            this.archiver.file(srcFile, {
+                name: fileName,
+                prefix: ''
+            });
+        } else {
+            this.log.debug(`Skip: ${srcFile}`);
+        }
+    }
+
+    zipDirectory(srcDir: string, targetPath: string, fingerprintsFile?: string): Promise<ZipResult> {
+        this.srcDir = srcDir;
         this.totalAddedFiles = 0;
 
         return new Promise<ZipResult>((resolve, reject) => {
@@ -28,36 +42,23 @@ export default class Zipper {
             const zipOutput = this.createOutputStream(targetPath, resolve);
             this.archiver.pipe(zipOutput);
 
-            Promise.all(this.srcDirs.map(srcDir => {
-                new Promise((innerResolve, innerReject) => {
-                    if (fs.lstatSync(srcDir).isDirectory()) {
-                        this.log.debug('Discovering files in source directory.');
-                        // followLinks is set to true to conform to Common Client behavior.
-                        walkSync(srcDir, {
-                            followLinks: true,
-                            listeners: {
-                                file: (parentDir: string, fileStats: any, discoverNextFile: () => void) => this.addFileToArchive(srcDir, parentDir, fileStats, discoverNextFile)
-                            }
-                        });
-                    } else {
-                        const index: number = srcDir.lastIndexOf(path.sep);
-                        const fileName: string = srcDir.substring(index + 1);
-                        if (this.filenameFiltersAnd.every(filter => filter.includes(fileName)) || this.filenameFiltersOr.some(filter => filter.includes(fileName))) {
-                            this.log.debug(` Add: ${ srcDir }`);
-                            this.archiver.file(srcDir, {
-                                name: fileName,
-                                prefix: ''
-                            });
-                        } else {
-                            this.log.debug(`Skip: ${ srcDir }`);
-                        }
-                    }
-                }).then(() => this.log.debug(`Resolved ${ srcDir }`));
-            })).then(() => {
-                this.log.debug('Finalizing ZIP.');
+            if (fingerprintsFile) {
+                this.addFileToZip(fingerprintsFile);
+            }
 
-                this.archiver.finalize();
-            });
+            if (fs.lstatSync(srcDir).isDirectory()) {
+                this.log.debug('Discovering files in source directory.');
+                // followLinks is set to true to conform to Common Client behavior.
+                const walker = walk(this.srcDir, { followLinks: true });
+                walker.on('file', this.addFileToArchive);
+                walker.on('end', () => {
+                    this.log.debug('Finished discovering files in source directory.');
+                });
+            } else {
+                this.addFileToZip(srcDir);
+            }
+
+            this.archiver.finalize();
         });
     }
 
@@ -91,17 +92,17 @@ export default class Zipper {
         return result;
     }
 
-    private addFileToArchive = (srcDir: string, parentDir: string, fileStats: any, discoverNextFile: () => void) => {
+    private addFileToArchive = (parentDir: string, fileStats: any, discoverNextFile: () => void) => {
         const absoluteFilePath = upath.resolve(parentDir, fileStats.name);
-        const relativeFilePath = upath.relative(srcDir, absoluteFilePath);
+        const relativeFilePath = upath.relative(this.srcDir, absoluteFilePath);
 
         // relativeFilePath is normalized to contain forward slashes independent of the current OS. Examples:
         //      page.cs                             - if page.cs is at the project's root dir
         //      services/internal/myservice.js      - if myservice.js is in a nested dir
         if (this.filenameFiltersAnd.every(filter => filter.includes(relativeFilePath)) && (!this.filenameFiltersOr.length || this.filenameFiltersOr.some(filter => filter.includes(relativeFilePath)))) {
-            this.log.debug(` Add: ${ absoluteFilePath }`);
+            this.log.debug(` Add: ${absoluteFilePath}`);
 
-            const relativeDirInArchive = upath.relative(srcDir, parentDir);
+            const relativeDirInArchive = upath.relative(this.srcDir, parentDir);
             this.archiver.file(absoluteFilePath, {
                 name: fileStats.name,
                 prefix: relativeDirInArchive

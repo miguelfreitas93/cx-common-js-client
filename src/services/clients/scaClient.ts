@@ -171,7 +171,6 @@ export class ScaClient {
 
     private async submitSourceFromLocalDir(): Promise<any> {
         const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
-        let zipFromLocations = [this.sourceLocation];
         let filePathFiltersAnd: FilePathFilter[] = [new FilePathFilter(this.config.dependencyFileExtension, this.config.dependencyFolderExclusion)];
         let filePathFiltersOr: FilePathFilter[] = [];
         let fingerprintsFilePath = '';
@@ -189,7 +188,6 @@ export class ScaClient {
             fingerprintsFilePath = await this.createScanFingerprintsFile([...filePathFiltersAnd, new FilePathFilter(projectResolvingConfiguration.getFingerprintsIncludePattern(), '')]);
 
             if (fingerprintsFilePath) {
-                zipFromLocations.push(fingerprintsFilePath);
                 filePathFiltersOr.push(new FilePathFilter(ScaClient.FINGERPRINT_FILE_NAME, ''));
             }
         } else if (this.config.fingerprintsFilePath) {
@@ -200,8 +198,8 @@ export class ScaClient {
 
         const zipper = new Zipper(this.log, filePathFiltersAnd, filePathFiltersOr);
 
-        this.log.debug(`Zipping code from ${zipFromLocations.join(', ')} into file ${tempFilename}`);
-        const zipResult = await zipper.zipDirectory(zipFromLocations, tempFilename);
+        this.log.debug(`Zipping code from ${this.sourceLocation}, ${fingerprintsFilePath} into file ${tempFilename}`);
+        const zipResult = await zipper.zipDirectory(this.sourceLocation, tempFilename, fingerprintsFilePath);
 
         if (zipResult.fileCount === 0) {
             throw new TaskSkippedError('Zip file is empty: no source to scan');
