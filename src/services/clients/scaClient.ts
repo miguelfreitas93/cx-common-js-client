@@ -25,6 +25,7 @@ import { ScaSummaryEvaluator } from "../scaSummaryEvaluator";
 import { ScanSummary } from "../../dto/scanSummary";
 import { ScaFingerprintCollector } from '../../dto/sca/scaFingerprintCollector';
 import * as path from "path";
+import ClientTypeResolver from "../clientTypeResolver";
 
 /**
  * SCA - Software Composition Analysis - is the successor of OSA.
@@ -49,9 +50,6 @@ export class ScaClient {
 
     private static FINGERPRINT_FILE_NAME = '.cxsca.sig';
     private static DEFAULT_FINGERPRINT_FILENAME = 'CxSCAFingerprints.json';
-
-    private static readonly CLOUD_ACCESS_CONTROL_BASE_URL: string = "https://platform.checkmarx.net";
-
     private projectId: string = '';
     private scanId: string = '';
 
@@ -63,19 +61,10 @@ export class ScaClient {
         private readonly log: Logger) {
     }
 
-    private resolveScaLoginSettings(scaConfig: ScaConfig): ScaLoginSettings {
+    private async resolveScaLoginSettings(scaConfig: ScaConfig): Promise<ScaLoginSettings> {
         const settings: ScaLoginSettings = new ScaLoginSettings();
 
         let acUrl: string = scaConfig.accessControlUrl;
-        let isAccessControlInCloud: boolean = false;
-
-        if (acUrl && acUrl.startsWith(ScaClient.CLOUD_ACCESS_CONTROL_BASE_URL)) {
-            isAccessControlInCloud = true;
-        }
-        else {
-            acUrl = url.resolve(acUrl, 'CxRestAPI/auth/');
-        }
-        this.log.info(isAccessControlInCloud ? "Using cloud authentication." : "Using on-premise authentication.");
 
         settings.apiUrl = scaConfig.apiUrl;
         settings.accessControlBaseUrl = acUrl;
@@ -83,7 +72,7 @@ export class ScaClient {
         settings.password = scaConfig.password;
         settings.tenant = scaConfig.tenant;
 
-        const clientType: ClientType = isAccessControlInCloud ? ClientType.SCA : ClientType.RESOURCE_OWNER;
+        const clientType: ClientType = await ClientTypeResolver.determineClientType(acUrl);
         settings.clientTypeForPasswordAuth = clientType;
 
         return settings;
@@ -91,7 +80,7 @@ export class ScaClient {
 
     public async scaLogin(scaConfig: ScaConfig) {
         this.log.info("Logging into CxSCA.");
-        const settings: ScaLoginSettings = this.resolveScaLoginSettings(scaConfig);
+        const settings: ScaLoginSettings = await this.resolveScaLoginSettings(scaConfig);
         await this.httpClient.scaLogin(settings);
     }
 
