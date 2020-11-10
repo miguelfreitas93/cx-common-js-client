@@ -103,16 +103,14 @@ export class ScaClient {
         }
 
         this.log.info('Resolve Project byName : ' + ScaClient.PROJECTS + '?name=' + projectName);
-        const project: Project = await this.httpClient.getRequest(ScaClient.PROJECTS + '?name=' + projectName)
-            .then(response => { return response.body })
-            .catch(e => {
-                console.log(e)
-                if (e.status === 404)
-                    return null;
-            });
-            
-        if (project)
-            this.projectId = project.id;
+        try {
+            const project: Project = await this.httpClient.getRequest(ScaClient.PROJECTS + '?name=' + projectName) as Project;
+            if (project)
+                this.projectId = project.id;
+        } catch (err) {
+            if (err.status !== 404)
+                this.log.error('Internal error,status :' + err.status)
+        }
     }
 
     private async getProjectIdByName(projectName: string) {
