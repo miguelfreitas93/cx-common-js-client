@@ -102,9 +102,17 @@ export class ScaClient {
             throw Error("Non-empty project name must be provided.");
         }
 
-        this.log.info('Resolve Project byName : ' + ScaClient.PROJECTS + '?name='+projectName);
-        const project: Project = await this.httpClient.getRequest(ScaClient.PROJECTS + '?name='+projectName) as Project;
-        this.projectId = project.id;
+        this.log.info('Resolve Project byName : ' + ScaClient.PROJECTS + '?name=' + projectName);
+        const project: Project = await this.httpClient.getRequest(ScaClient.PROJECTS + '?name=' + projectName)
+            .then(response => { return response.body })
+            .catch(e => {
+                console.log(e)
+                if (e.status === 404)
+                    return null;
+            });
+            
+        if (project)
+            this.projectId = project.id;
     }
 
     private async getProjectIdByName(projectName: string) {
