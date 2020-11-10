@@ -86,7 +86,7 @@ export class ScaClient {
 
     public async resolveProject(projectName: string) {
         this.log.info("Resolving project by name: " + projectName);
-        await this.getProjectIdByName(projectName);
+        await this.resolveProjectId(projectName);
         if (!this.projectId) {
             this.log.info("Project not found, creating a new one.");
             this.projectId = await this.createProject(projectName);
@@ -95,6 +95,16 @@ export class ScaClient {
         else {
             this.log.info("Project already exists with ID: " + this.projectId);
         }
+    }
+
+    private async resolveProjectId(projectName: string) {
+        if (!projectName || projectName === '') {
+            throw Error("Non-empty project name must be provided.");
+        }
+
+        this.log.info('Resolve Project byName : ' + ScaClient.PROJECTS + '?name='+projectName);
+        const project: Project = await this.httpClient.getRequest(ScaClient.PROJECTS + '?name='+projectName) as Project;
+        this.projectId = project.id;
     }
 
     private async getProjectIdByName(projectName: string) {
