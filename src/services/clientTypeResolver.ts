@@ -10,16 +10,7 @@ export class ClientTypeResolver {
     public static async determineClientType(accessControlServerBaseUrl: string): Promise<ClientType> {
         const fullUrl = ClientTypeResolver.getFullUrl(accessControlServerBaseUrl);
 
-        const supportedScopes = await request['get'](fullUrl)
-            .accept('json')
-            .then(
-                (response: request.Response) => response.body.scopes_supported,
-                async (err: any) =>
-                {
-                    console.error(err);
-                    return [];
-                 }
-            );
+        const supportedScopes = await ClientTypeResolver.getScopes(fullUrl) as string[];
 
 
         let scopesToUse: string[] = [];
@@ -37,6 +28,18 @@ export class ClientTypeResolver {
 
         const scopesForRequest: string = scopesToUse.join(" ");
         return new ClientType(ClientType.RESOURCE_OWNER.clientId, scopesForRequest, clientSecret);
+    }
+
+    private static getScopes(fullUrl:string) : Promise<any>{
+        return request['get'](fullUrl)
+            .accept('json')
+            .then(
+                (response: request.Response) => response.body.scopes_supported,
+                async (err: any) =>
+                {
+                    return [];
+                 }
+            );
     }
    
 
