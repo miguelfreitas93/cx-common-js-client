@@ -1,4 +1,4 @@
-import { ScanConfig } from "../..";
+import {ProxyConfig, ScanConfig} from "../..";
 import { HttpClient } from "./httpClient";
 import Zipper from "../zipper";
 import { TaskSkippedError } from "../..";
@@ -36,6 +36,7 @@ export class CxClient {
     private config: ScanConfig | any;
     private sastConfig: SastConfig | any;
     private scaConfig: ScaConfig | any;
+    private proxyConfig : ProxyConfig | any;
 
     constructor(private readonly log: Logger) {
     }
@@ -44,6 +45,7 @@ export class CxClient {
         this.config = config;
         this.sastConfig = config.sastConfig;
         this.scaConfig = config.scaConfig;
+        this.proxyConfig = config.proxyConfig;
         let result: ScanResults = new ScanResults();
         result.syncMode = this.config.isSyncMode;
 
@@ -85,7 +87,11 @@ export class CxClient {
         const baseUrl = url.resolve(this.sastConfig.serverUrl, 'CxRestAPI/');
 
         if (!httpClient) {
-            this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log);
+            if(this.config.enableProxy && this.config.proxyConfig && this.proxyConfig.proxyHost!=''){
+                this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log,this.proxyConfig);
+            }else{
+                this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log);
+            }
             await this.httpClient.login(this.sastConfig.username, this.sastConfig.password);
         }
         else {
@@ -101,8 +107,14 @@ export class CxClient {
     }
 
     private async initScaClient() {
-        const scaHttpClient: HttpClient = new HttpClient(this.scaConfig.apiUrl, this.config.cxOrigin, this.log);
-        this.scaClient = new ScaClient(this.scaConfig, this.config.sourceLocation, scaHttpClient, this.log);
+        let scaHttpClient: HttpClient;
+        if(this.config.enableProxy && this.config.proxyConfig && this.proxyConfig.proxyHost!=''){
+            scaHttpClient = new HttpClient(this.scaConfig.apiUrl, this.config.cxOrigin, this.log,this.proxyConfig);
+        }else{
+            scaHttpClient = new HttpClient(this.scaConfig.apiUrl, this.config.cxOrigin, this.log);
+        }
+
+        this.scaClient = new ScaClient(this.scaConfig, this.config.sourceLocation, scaHttpClient, this.log,this.config);
         await this.scaClient.scaLogin(this.scaConfig);
         await this.scaClient.resolveProject(this.config.projectName);
     }

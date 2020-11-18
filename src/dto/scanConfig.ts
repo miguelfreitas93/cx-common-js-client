@@ -1,5 +1,6 @@
 import { ScaConfig } from './sca/scaConfig';
 import { SastConfig } from './sastConfig';
+import {ProxyConfig} from "./proxyConfig";
 
 export interface ScanConfig {
     sourceLocation: string;
@@ -8,7 +9,9 @@ export interface ScanConfig {
     isSyncMode: boolean;
     enableSastScan: boolean;
     enableDependencyScan: boolean;
+    enableProxy: boolean;
     cxOrigin: string;
     sastConfig?: SastConfig;
     scaConfig?: ScaConfig;
+    proxyConfig?: ProxyConfig;
 }

@@ -15,3 +15,4 @@ export { SourceLocationType } from './dto/sca/sourceLocationType';
 export { RemoteRepositoryInfo } from './dto/sca/remoteRepositoryInfo';
 export { ScaReportResults } from './dto/sca/scaReportResults';
 export { SastConfig } from './dto/sastConfig';
+export { ProxyConfig } from './dto/proxyConfig';
