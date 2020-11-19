@@ -1,6 +1,6 @@
 {
   "name": "@checkmarx/cx-common-js-client",
-  "version": "0.1.46",
+  "version": "0.1.47",
   "description": "Client for interaction with Checkmarx products.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,6 +32,9 @@
     "url": "https://github.com/checkmarx-ltd/cx-common-js-client/issues"
   },
   "homepage": "https://github.com/checkmarx-ltd/cx-common-js-client#readme",
+  "optionalDependencies": {
+    "@checkmarx/cli": "^1.0.1"
+  },
   "dependencies": {
     "archiver": "^3.0.0",
     "dateformat": "^3.0.3",
