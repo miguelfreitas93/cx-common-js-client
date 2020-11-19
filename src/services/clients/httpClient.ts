@@ -164,7 +164,11 @@ export class HttpClient {
             result = result.send(options.singlePostData);
         } else if (options.multipartPostData) {
             const { fields, attachments } = options.multipartPostData;
-            result = result.field(fields);
+            
+            for (const prop in fields) {
+                result = result.field(prop, fields[prop]);
+            }
+
             for (const prop in attachments) {
                 result = result.attach(prop, attachments[prop]);
             }
