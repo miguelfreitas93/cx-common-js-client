@@ -1,6 +1,6 @@
 {
   "name": "@checkmarx/cx-common-js-client",
-  "version": "0.1.45",
+  "version": "0.1.46",
   "description": "Client for interaction with Checkmarx products.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,18 +32,16 @@
     "url": "https://github.com/checkmarx-ltd/cx-common-js-client/issues"
   },
   "homepage": "https://github.com/checkmarx-ltd/cx-common-js-client#readme",
-  "optionalDependencies": {
-    "@checkmarx/cli": "^1.0.1"
-  },
   "dependencies": {
-    "@checkmarx/cli": "^1.0.1",
     "archiver": "^3.0.0",
     "dateformat": "^3.0.3",
     "micromatch": "^3.1.10",
     "mkdirp": "^0.5.4",
     "parse-ms": "^2.1.0",
     "promise-poller": "^1.9.1",
+    "proxy-agent": "^4.0.0",
     "superagent": "^5.1.0",
+    "superagent-proxy": "^2.1.0",
     "tmp": "^0.1.0",
     "upath": "^1.2.0",
     "walk": "^2.3.14",
@@ -56,6 +54,7 @@
     "@types/node": "^6.14.7",
     "@types/promise-poller": "^1.7.0",
     "@types/superagent": "^4.1.3",
+    "@types/superagent-proxy": "^2.0.0",
     "@types/tmp": "^0.1.0",
     "@types/walk": "^2.3.0",
     "@types/xml2js": "^0.4.5",

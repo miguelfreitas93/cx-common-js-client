@@ -1,4 +1,4 @@
-import { Logger, ScaConfig } from "../..";
+import {Logger, ScaConfig, ScanConfig} from "../..";
 import { HttpClient } from "./httpClient";
 import { Stopwatch } from "../stopwatch";
 import { ScaLoginSettings } from "../../dto/sca/scaLoginSettings";
@@ -58,7 +58,8 @@ export class ScaClient {
     constructor(private readonly config: ScaConfig,
         private readonly sourceLocation: string,
         private readonly httpClient: HttpClient,
-        private readonly log: Logger) {
+        private readonly log: Logger,
+        private readonly scanConfig:ScanConfig) {
     }
 
     private async resolveScaLoginSettings(scaConfig: ScaConfig): Promise<ScaLoginSettings> {
@@ -249,7 +250,12 @@ export class ScaClient {
     private async uploadToAWS(uploadUrl: string, file: string) {
         this.log.debug(`Sending PUT request to ${uploadUrl}`);
         const child_process = require('child_process');
-        const command = `curl -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
+        let command;
+        if(this.scanConfig.enableProxy && this.scanConfig.proxyConfig && this.scanConfig.proxyConfig.proxyHost!=''){
+            command = `curl -U ${this.scanConfig.proxyConfig.proxyUser}:${this.scanConfig.proxyConfig.proxyPass} -x ${this.scanConfig.proxyConfig.proxyHost} -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
+        }else{
+            command = `curl -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
+        }
         child_process.execSync(command, { stdio: 'pipe' });
     }
 
