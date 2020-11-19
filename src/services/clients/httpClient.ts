@@ -1,9 +1,9 @@
 import * as url from 'url';
 import * as path from "path";
 import * as request from 'superagent';
-import { Logger } from "../logger";
-import { ScaLoginSettings } from "../../dto/sca/scaLoginSettings";
-import { ScaClient } from './scaClient';
+import {Logger} from "../logger";
+import {ScaLoginSettings} from "../../dto/sca/scaLoginSettings";
+import {ScaClient} from './scaClient';
 import {ProxyConfig} from "../..";
 import {ProxyHelper} from "../proxyHelper";
 import {SuperAgentRequest} from "superagent";
@@ -39,7 +39,7 @@ export class HttpClient {
     private scaSettings: ScaLoginSettings | any;
     private isSsoLogin: boolean = false;
 
-    constructor(private readonly baseUrl: string, private readonly origin: string, private readonly log: Logger,private readonly proxyConfig ?:ProxyConfig) {
+    constructor(private readonly baseUrl: string, private readonly origin: string, private readonly log: Logger, private readonly proxyConfig ?: ProxyConfig) {
     }
 
     login(username: string, password: string) {
@@ -59,21 +59,21 @@ export class HttpClient {
     }
 
     getRequest(relativePath: string, options?: RequestOptions): Promise<any> {
-        const internalOptions: InternalRequestOptions = { retry: true, method: 'get' };
+        const internalOptions: InternalRequestOptions = {retry: true, method: 'get'};
         return this.sendRequest(relativePath, Object.assign(internalOptions, options));
     }
 
     postRequest(relativePath: string, data: object): Promise<any> {
-        return this.sendRequest(relativePath, { singlePostData: data, retry: true, method: 'post' });
+        return this.sendRequest(relativePath, {singlePostData: data, retry: true, method: 'post'});
     }
 
     putRequest(relativePath: string, data: object): Promise<any> {
-        return this.sendRequest(relativePath, { singlePostData: data, retry: true, method: 'put' });
+        return this.sendRequest(relativePath, {singlePostData: data, retry: true, method: 'put'});
     }
 
     postMultipartRequest(relativePath: string,
-        fields: { [fieldName: string]: any },
-        attachments: { [fieldName: string]: string }) {
+                         fields: { [fieldName: string]: any },
+                         attachments: { [fieldName: string]: string }) {
         return this.sendRequest(relativePath, {
             method: 'post',
             multipartPostData: {
@@ -92,24 +92,24 @@ export class HttpClient {
 
         this.log.debug(`Sending ${options.method.toUpperCase()} request to ${fullUrl}`);
         let proxyUrl;
-        if(this.proxyConfig){
+        if (this.proxyConfig) {
             proxyUrl = ProxyHelper.getFormattedProxy(this.proxyConfig);
         }
 
-        let result:SuperAgentRequest;
-        if(proxyUrl){
-             result = request[options.method](fullUrl)
+        let result: SuperAgentRequest;
+        if (proxyUrl) {
+            result = request[options.method](fullUrl)
                 .accept('json')
                 .set('cxOrigin', this.origin)
                 .proxy(proxyUrl);
-        }else{
-             result = request[options.method](fullUrl)
+        } else {
+            result = request[options.method](fullUrl)
                 .accept('json')
                 .set('cxOrigin', this.origin);
         }
 
         if (this.accessToken) {
-            result.auth(this.accessToken, { type: 'bearer' });
+            result.auth(this.accessToken, {type: 'bearer'});
         }
 
         if (this.cookies && this.cookies.size > 0) {
@@ -139,11 +139,9 @@ export class HttpClient {
 
             if (this.scaSettings && this.scaSettings.apiUrl === this.baseUrl) {
                 await this.scaLogin(this.scaSettings);
-            }
-            else if (this.username && this.password) {
+            } else if (this.username && this.password) {
                 await this.loginWithStoredCredentials();
-            }
-            else if (this.isSsoLogin) {
+            } else if (this.isSsoLogin) {
                 this.ssoLogin();
             }
 
@@ -163,8 +161,8 @@ export class HttpClient {
         if (options.singlePostData) {
             result = result.send(options.singlePostData);
         } else if (options.multipartPostData) {
-            const { fields, attachments } = options.multipartPostData;
-            
+            const {fields, attachments} = options.multipartPostData;
+
             for (const prop in fields) {
                 result = result.field(prop, fields[prop]);
             }
@@ -181,58 +179,34 @@ export class HttpClient {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
         const fullUrl = url.resolve(this.baseUrl, 'auth/identity/connect/token');
         let proxyUrl;
-        if(this.proxyConfig){
+        if (this.proxyConfig) {
             proxyUrl = ProxyHelper.getFormattedProxy(this.proxyConfig);
         }
-        if(proxyUrl){
-            return request
-                .post(fullUrl)
-                .type('form')
-                .proxy(proxyUrl)
-                .send({
-                    userName: this.username,
-                    password: this.password,
-                    grant_type: 'password',
-                    scope: 'sast_rest_api',
-                    client_id: 'resource_owner_client',
-                    client_secret: '014DF517-39D1-4453-B7B3-9930C563627C'
-                })
-                .then(
-                    (response: request.Response) => {
-                        this.accessToken = response.body.access_token;
-                    },
-                    (err: any) => {
-                        const status = err && err.response ? (err.response as request.Response).status : 'n/a';
-                        const message = err && err.message ? err.message : 'n/a';
-                        this.log.error(`POST request failed to ${fullUrl}. HTTP status: ${status}, message: ${message}`);
-                        throw Error('Login failed');
-                    }
-                );
-        }else{
-            return request
-                .post(fullUrl)
-                .type('form')
-                .send({
-                    userName: this.username,
-                    password: this.password,
-                    grant_type: 'password',
-                    scope: 'sast_rest_api',
-                    client_id: 'resource_owner_client',
-                    client_secret: '014DF517-39D1-4453-B7B3-9930C563627C'
-                })
-                .then(
-                    (response: request.Response) => {
-                        this.accessToken = response.body.access_token;
-                    },
-                    (err: any) => {
-                        const status = err && err.response ? (err.response as request.Response).status : 'n/a';
-                        const message = err && err.message ? err.message : 'n/a';
-                        this.log.error(`POST request failed to ${fullUrl}. HTTP status: ${status}, message: ${message}`);
-                        throw Error('Login failed');
-                    }
-                );
+        let newRequest = request
+            .post(fullUrl)
+            .type('form');
+        if (proxyUrl) {
+            newRequest.proxy(proxyUrl);
         }
-
+        return  newRequest.send({
+            userName: this.username,
+            password: this.password,
+            grant_type: 'password',
+            scope: 'sast_rest_api',
+            client_id: 'resource_owner_client',
+            client_secret: '014DF517-39D1-4453-B7B3-9930C563627C'
+        })
+            .then(
+                (response: request.Response) => {
+                    this.accessToken = response.body.access_token;
+                },
+                (err: any) => {
+                    const status = err && err.response ? (err.response as request.Response).status : 'n/a';
+                    const message = err && err.message ? err.message : 'n/a';
+                    this.log.error(`POST request failed to ${fullUrl}. HTTP status: ${status}, message: ${message}`);
+                    throw Error('Login failed');
+                }
+            );
     }
 
     async scaLogin(settings: ScaLoginSettings) {
@@ -241,66 +215,38 @@ export class HttpClient {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
         const fullUrl = url.resolve(settings.accessControlBaseUrl, ScaClient.AUTHENTICATION);
         let proxyUrl;
-        if(this.proxyConfig){
+        if (this.proxyConfig) {
             proxyUrl = ProxyHelper.getFormattedProxy(this.proxyConfig);
         }
-        if(proxyUrl){
-            return request
-                .post(fullUrl)
-                .type('form')
-                .proxy(proxyUrl)
-                // Pass tenant name in a custom header. This will allow to get token from on-premise access control server
-                // and then use this token for SCA authentication in cloud.
-                .set(ScaClient.TENANT_HEADER_NAME, settings.tenant)
-                .send({
-                    userName: settings.username,
-                    password: settings.password,
-                    grant_type: 'password',
-                    scope: settings.clientTypeForPasswordAuth.scopes,
-                    client_id: settings.clientTypeForPasswordAuth.clientId,
-                    client_secret: settings.clientTypeForPasswordAuth.clientSecret,
-                    acr_values: 'Tenant:' + settings.tenant
-                })
-                .then(
-                    (response: request.Response) => {
-                        this.accessToken = response.body.access_token;
-                    },
-                    (err: any) => {
-                        const status = err && err.response ? (err.response as request.Response).status : 'n/a';
-                        const message = err && err.message ? err.message : 'n/a';
-                        this.log.error(`POST request failed to ${fullUrl}. HTTP status: ${status}, message: ${message}`);
-                        throw Error('Login failed');
-                    }
-                );
-        }else{
-            return request
-                .post(fullUrl)
-                .type('form')
-                // Pass tenant name in a custom header. This will allow to get token from on-premise access control server
-                // and then use this token for SCA authentication in cloud.
-                .set(ScaClient.TENANT_HEADER_NAME, settings.tenant)
-                .send({
-                    userName: settings.username,
-                    password: settings.password,
-                    grant_type: 'password',
-                    scope: settings.clientTypeForPasswordAuth.scopes,
-                    client_id: settings.clientTypeForPasswordAuth.clientId,
-                    client_secret: settings.clientTypeForPasswordAuth.clientSecret,
-                    acr_values: 'Tenant:' + settings.tenant
-                })
-                .then(
-                    (response: request.Response) => {
-                        this.accessToken = response.body.access_token;
-                    },
-                    (err: any) => {
-                        const status = err && err.response ? (err.response as request.Response).status : 'n/a';
-                        const message = err && err.message ? err.message : 'n/a';
-                        this.log.error(`POST request failed to ${fullUrl}. HTTP status: ${status}, message: ${message}`);
-                        throw Error('Login failed');
-                    }
-                );
+        let newRequest = request
+            .post(fullUrl)
+            .type('form');
+        if (proxyUrl) {
+            newRequest.proxy(proxyUrl)
         }
-
+        // Pass tenant name in a custom header. This will allow to get token from on-premise access control server
+        // and then use this token for SCA authentication in cloud.
+        return newRequest.set(ScaClient.TENANT_HEADER_NAME, settings.tenant)
+            .send({
+                userName: settings.username,
+                password: settings.password,
+                grant_type: 'password',
+                scope: settings.clientTypeForPasswordAuth.scopes,
+                client_id: settings.clientTypeForPasswordAuth.clientId,
+                client_secret: settings.clientTypeForPasswordAuth.clientSecret,
+                acr_values: 'Tenant:' + settings.tenant
+            })
+            .then(
+                (response: request.Response) => {
+                    this.accessToken = response.body.access_token;
+                },
+                (err: any) => {
+                    const status = err && err.response ? (err.response as request.Response).status : 'n/a';
+                    const message = err && err.message ? err.message : 'n/a';
+                    this.log.error(`POST request failed to ${fullUrl}. HTTP status: ${status}, message: ${message}`);
+                    throw Error('Login failed');
+                }
+            );
     }
 
     async ssoLogin() {
@@ -314,11 +260,9 @@ export class HttpClient {
         output.split(/\r?\n/).forEach((line) => {
             if (line.includes('Access Token: ')) {
                 this.accessToken = line.split('Access Token: ')[1];
-            }
-            else if (line.includes('CXCSRFToken: ')) {
+            } else if (line.includes('CXCSRFToken: ')) {
                 this.cookies.set('CXCSRFToken', line.split('CXCSRFToken: ')[1]);
-            }
-            else if (line.includes('cookie: ')) {
+            } else if (line.includes('cookie: ')) {
                 this.cookies.set('cookie', line.split('cookie: ')[1]);
             }
         });
