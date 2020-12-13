@@ -67,6 +67,10 @@ export class HttpClient {
         return this.sendRequest(relativePath, { singlePostData: data, retry: true, method: 'put' });
     }
 
+    putRequestEmptyContentType(fullPath: string, data: string){
+        return request.put(fullPath).set('Content-Type','').send(data);
+    }
+
     postMultipartRequest(relativePath: string,
         fields: { [fieldName: string]: any },
         attachments: { [fieldName: string]: string }) {
