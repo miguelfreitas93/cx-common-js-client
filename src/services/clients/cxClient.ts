@@ -1,4 +1,4 @@
-import { ScanConfig } from "../..";
+import {ProxyConfig, ScanConfig} from "../..";
 import { HttpClient } from "./httpClient";
 import Zipper from "../zipper";
 import { TaskSkippedError } from "../..";
@@ -18,6 +18,7 @@ import { tmpNameSync } from "tmp";
 import { ScaClient } from "./scaClient";
 import { SastConfig } from '../../dto/sastConfig';
 import { ScaConfig } from '../../dto/sca/scaConfig';
+import { ScanWithSettingsResponse } from "../../dto/api/scanWithSettingsResponse";
 
 /**
  * High-level CX API client that uses specialized clients internally.
@@ -36,7 +37,9 @@ export class CxClient {
     private config: ScanConfig | any;
     private sastConfig: SastConfig | any;
     private scaConfig: ScaConfig | any;
+    private proxyConfig : ProxyConfig | any;
 
+    private swaggerLocation = 'help/swagger/docs/v1.1';
     constructor(private readonly log: Logger) {
     }
 
@@ -44,6 +47,7 @@ export class CxClient {
         this.config = config;
         this.sastConfig = config.sastConfig;
         this.scaConfig = config.scaConfig;
+        this.proxyConfig = config.proxyConfig;
         let result: ScanResults = new ScanResults();
         result.syncMode = this.config.isSyncMode;
 
@@ -85,7 +89,11 @@ export class CxClient {
         const baseUrl = url.resolve(this.sastConfig.serverUrl, 'CxRestAPI/');
 
         if (!httpClient) {
-            this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log);
+            if(this.config.enableProxy && this.config.proxyConfig && this.proxyConfig.proxyHost!=''){
+                this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log,this.proxyConfig);
+            }else{
+                this.httpClient = new HttpClient(baseUrl, this.config.cxOrigin, this.log);
+            }
             await this.httpClient.login(this.sastConfig.username, this.sastConfig.password);
         }
         else {
@@ -101,23 +109,48 @@ export class CxClient {
     }
 
     private async initScaClient() {
-        const scaHttpClient: HttpClient = new HttpClient(this.scaConfig.apiUrl, this.config.cxOrigin, this.log);
-        this.scaClient = new ScaClient(this.scaConfig, this.config.sourceLocation, scaHttpClient, this.log);
+        let scaHttpClient: HttpClient;
+        if(this.config.enableProxy && this.config.proxyConfig && this.proxyConfig.proxyHost!=''){
+            scaHttpClient = new HttpClient(this.scaConfig.apiUrl, this.config.cxOrigin, this.log,this.proxyConfig);
+        }else{
+            scaHttpClient = new HttpClient(this.scaConfig.apiUrl, this.config.cxOrigin, this.log);
+        }
+
+        this.scaClient = new ScaClient(this.scaConfig, this.config.sourceLocation, scaHttpClient, this.log,this.config);
         await this.scaClient.scaLogin(this.scaConfig);
         await this.scaClient.resolveProject(this.config.projectName);
     }
 
     private async createSASTScan(scanResult: ScanResults): Promise<ScanResults> {
         this.log.info('-----------------------------------Create CxSAST Scan:-----------------------------------');
-        await this.updateScanSettings();
-        await this.uploadSourceCode();
+        const runScanWithSettings: boolean = await this.isScanWithSettingsSupported() as boolean;
+        if (runScanWithSettings) {
+            this.log.debug('start scan with scanWithSettings');
+            const scanResponse: ScanWithSettingsResponse = await this.scanWithSetting() as ScanWithSettingsResponse;
+            this.sastClient.setScanId(scanResponse.id)
+            scanResult.scanId = scanResponse.id;
+        } else {
+            this.log.debug('start scan with legacy approach');
+            await this.updateScanSettings();
+            await this.uploadSourceCode();
+            scanResult.scanId = await this.sastClient.createScan(this.projectId);
+        }
 
-        scanResult.scanId = await this.sastClient.createScan(this.projectId);
+        this.log.debug('scan id ' + scanResult.scanId);
 
         const projectStateUrl = url.resolve(this.sastConfig.serverUrl, `CxWebClient/portal#/projectState/${this.projectId}/Summary`);
         this.log.info(`SAST scan created successfully. CxLink to project state: ${projectStateUrl}`);
 
         return scanResult;
+    }
+
+    async isScanWithSettingsSupported(): Promise<boolean> {
+        try {
+            const swaggerResponse = await this.httpClient.getRequest(this.swaggerLocation, { suppressWarnings: true })
+            return swaggerResponse.paths.hasOwnProperty('/sast/scanWithSettings');
+        } catch (e) {
+            return false;
+        }
     }
 
     private async getSASTResults(result: ScanResults): Promise<ScanResults> {
@@ -165,7 +198,32 @@ export class CxClient {
         return projectId;
     }
 
+    private async scanWithSetting(): Promise<ScanWithSettingsResponse> {
+        const tempFilename = await this.zipContent();
+
+        this.log.info(`Uploading the zipped source code.`);
+        return this.httpClient.postMultipartRequest('sast/scanWithSettings',
+            {
+                projectId: this.projectId,
+                overrideProjectSetting: false,
+                isIncremental: this.sastConfig.isIncremental,
+                isPublic: this.sastConfig.isPublic,
+                forceScan: this.sastConfig.forceScan,
+                presetId: this.presetId
+            },
+            { zippedSource: tempFilename });
+    }
+
     private async uploadSourceCode(): Promise<void> {
+        const tempFilename = await this.zipContent();
+        this.log.info(`Uploading the zipped source code.`);
+        const urlPath = `projects/${this.projectId}/sourceCode/attachments`;
+        await this.httpClient.postMultipartRequest(urlPath,
+            { id: this.projectId },
+            { zippedSource: tempFilename });
+    }
+
+    private async zipContent() {
         const tempFilename = tmpNameSync({ prefix: 'cxsrc-', postfix: '.zip' });
         this.log.debug(`Zipping source code at ${this.config.sourceLocation} into file ${tempFilename}`);
         let filter: FilePathFilter;
@@ -175,11 +233,7 @@ export class CxClient {
         if (zipResult.fileCount === 0) {
             throw new TaskSkippedError('Zip file is empty: no source to scan');
         }
-        this.log.info(`Uploading the zipped source code.`);
-        const urlPath = `projects/${this.projectId}/sourceCode/attachments`;
-        await this.httpClient.postMultipartRequest(urlPath,
-            { id: this.projectId },
-            { zippedSource: tempFilename });
+        return tempFilename;
     }
 
     private async getCurrentProjectId(): Promise<number> {

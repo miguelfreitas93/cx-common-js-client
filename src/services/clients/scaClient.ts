@@ -254,8 +254,7 @@ export class ScaClient {
         if(this.scanConfig.enableProxy && this.scanConfig.proxyConfig && this.scanConfig.proxyConfig.proxyHost!=''){
             command = `curl -U ${this.scanConfig.proxyConfig.proxyUser}:${this.scanConfig.proxyConfig.proxyPass} -x ${this.scanConfig.proxyConfig.proxyHost} -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
         }else{
-            //command = `curl -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
-            await this.httpClient.putRequestEmptyContentType(uploadUrl,file);
+            command = `curl -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
         }
         child_process.execSync(command, { stdio: 'pipe' });
     }

@@ -65,6 +65,10 @@ export class SastClient {
         return scan.id;
     }
 
+    setScanId(scanId:number){
+        this.scanId = scanId;
+    }
+
     getScanStatistics(scanId: number) {
         return this.httpClient.getRequest(`sast/scans/${scanId}/resultsStatistics`);
     }
