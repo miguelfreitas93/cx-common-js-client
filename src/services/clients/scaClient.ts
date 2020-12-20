@@ -252,7 +252,13 @@ export class ScaClient {
         const child_process = require('child_process');
         let command;
         if(this.scanConfig.enableProxy && this.scanConfig.proxyConfig && this.scanConfig.proxyConfig.proxyHost!=''){
-            command = `curl -U ${this.scanConfig.proxyConfig.proxyUser}:${this.scanConfig.proxyConfig.proxyPass} -x ${this.scanConfig.proxyConfig.proxyHost} -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
+            let authentication;
+            if(this.scanConfig.proxyConfig.proxyUser!=undefined && this.scanConfig.proxyConfig.proxyPass!=undefined){
+                authentication = `-U ${this.scanConfig.proxyConfig.proxyUser}:${this.scanConfig.proxyConfig.proxyPass}`;
+            }else{
+                authentication = ``;
+            }
+            command = `curl ${authentication} -x ${this.scanConfig.proxyConfig.proxyHost} -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
         }else{
             command = `curl -X PUT -L "${uploadUrl}" -H "Content-Type:" -T "${file}"`;
         }
