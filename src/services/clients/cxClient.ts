@@ -40,6 +40,7 @@ export class CxClient {
     private proxyConfig : ProxyConfig | any;
 
     private swaggerLocation = 'help/swagger/docs/v1.1';
+    private isNewProject:boolean = false;
     constructor(private readonly log: Logger) {
     }
 
@@ -127,7 +128,7 @@ export class CxClient {
         if (runScanWithSettings) {
             this.log.debug('start scan with scanWithSettings');
             const scanResponse: ScanWithSettingsResponse = await this.scanWithSetting() as ScanWithSettingsResponse;
-            this.sastClient.setScanId(scanResponse.id)
+            this.sastClient.setScanId(scanResponse.id);
             scanResult.scanId = scanResponse.id;
         } else {
             this.log.debug('start scan with legacy approach');
@@ -183,9 +184,10 @@ export class CxClient {
         let projectId = await this.getCurrentProjectId();
         if (projectId) {
             this.log.debug(`Resolved project ID: ${projectId}`);
+            this.isNewProject=false;
         } else {
             this.log.info('Project not found, creating a new one.');
-
+            this.isNewProject=true;
             if (this.sastConfig.denyProject) {
                 throw Error(
                     `Creation of the new project [${this.config.projectName}] is not authorized. Please use an existing project.` +
@@ -205,11 +207,12 @@ export class CxClient {
         return this.httpClient.postMultipartRequest('sast/scanWithSettings',
             {
                 projectId: this.projectId,
-                overrideProjectSetting: false,
+                overrideProjectSetting: this.isNewProject,
                 isIncremental: this.sastConfig.isIncremental,
                 isPublic: this.sastConfig.isPublic,
                 forceScan: this.sastConfig.forceScan,
-                presetId: this.presetId
+                presetId: this.presetId,
+                comment: this.sastConfig.comment
             },
             { zippedSource: tempFilename });
     }
@@ -330,7 +333,6 @@ export class CxClient {
         const client = new ReportingClient(this.httpClient, this.log);
         let reportXml;
 
-        if (this.config.cxOrigin == 'VSTS') {
             for (let i = 1; i < 25; i++) {
                 try {
                     reportXml = await client.generateReport(result.scanId, this.config.cxOrigin);
@@ -343,9 +345,6 @@ export class CxClient {
                     await this.delay(15555);
                 }
             }
-        } else {
-            reportXml = await client.generateReport(result.scanId, this.config.cxOrigin);
-        }
 
         const doc = reportXml.CxXMLResults;
         result.scanStart = doc.$.ScanStart;
